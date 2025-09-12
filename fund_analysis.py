@@ -11,14 +11,18 @@ plt.rcParams['font.sans-serif'] = ['SimHei']
 plt.rcParams['axes.unicode_minus'] = False
 
 def get_real_data_from_list(fund_codes, benchmark_code, start_date, end_date):
-    """
-    从akshare获取指定基金和基准指数的真实净值数据。
-    """
     all_data = pd.DataFrame()
     
     # 获取基准指数数据
     try:
         index_data = ak.stock_zh_index_daily_em(symbol=benchmark_code)
+        print("指数数据列名：", index_data.columns)  # 调试：打印列名
+        if index_data.empty:
+            print("❌ 指数数据为空")
+            return None
+        if 'date' not in index_data.columns:
+            print(f"❌ 指数数据缺少 'date' 列，实际列名：{index_data.columns}")
+            return None
         index_data['date'] = pd.to_datetime(index_data['date'])
         index_data = index_data.set_index('date')['close'].rename('沪深300')
         all_data = pd.DataFrame(index_data)
@@ -30,9 +34,10 @@ def get_real_data_from_list(fund_codes, benchmark_code, start_date, end_date):
     # 获取基金净值数据
     for code in fund_codes:
         try:
-            fund_data = ak.fund_open_fund_info_em(
-                fund_code=code, start_date=start_date, end_date=end_date
-            )
+            fund_data = ak.fund_open_fund_info_em(fund_code=str(code).zfill(6), start_date=start_date, end_date=end_date)
+            if fund_data.empty:
+                print(f"❌ 基金 {code} 数据为空")
+                continue
             fund_data['净值日期'] = pd.to_datetime(fund_data['净值日期'])
             fund_data = fund_data.set_index('净值日期')['单位净值'].rename(code)
             all_data = pd.concat([all_data, fund_data], axis=1)
@@ -41,14 +46,15 @@ def get_real_data_from_list(fund_codes, benchmark_code, start_date, end_date):
             print(f"❌ 获取基金 {code} 数据失败：{e}")
 
     # 清理和处理数据
+    if all_data.empty:
+        print("❌ 所有数据为空，无法进行分析")
+        return None
     all_data = all_data.dropna().sort_index()
-    # 将所有净值数据标准化，从1开始
     all_data_normalized = all_data / all_data.iloc[0]
     
     return all_data_normalized
 
 def plot_net_value(df_normalized):
-    """绘制所有基金和指数的净值走势图"""
     plt.figure(figsize=(12, 6))
     for col in df_normalized.columns:
         plt.plot(df_normalized.index, df_normalized[col], label=col)
@@ -62,7 +68,6 @@ def plot_net_value(df_normalized):
     print("📊 净值走势图已保存到 net_value_chart.png")
 
 def plot_drawdown(df_normalized):
-    """绘制所有基金和指数的回撤走势图"""
     plt.figure(figsize=(12, 6))
     for col in df_normalized.columns:
         cumulative_returns = df_normalized[col]
@@ -87,7 +92,6 @@ def main():
         df_list = pd.read_csv(io.StringIO(response.text), encoding='utf-8')
         df_list.columns = df_list.columns.str.strip()
         fund_codes = df_list['代码'].tolist()
-        # 为了演示，只取前5个基金代码
         selected_fund_codes = fund_codes[:5]
         print(f"✅ 成功获取基金代码列表: {selected_fund_codes}")
     except Exception as e:
@@ -96,13 +100,12 @@ def main():
         
     print("\n--- 2. 开始从 akshare 获取真实数据 ---")
     
-    # 定义分析时间段，例如近2年
     end_date = pd.to_datetime('today').strftime('%Y%m%d')
     start_date = (pd.to_datetime('today') - pd.DateOffset(years=2)).strftime('%Y%m%d')
     
     df_normalized = get_real_data_from_list(
         fund_codes=selected_fund_codes,
-        benchmark_code='000300', # 沪深300
+        benchmark_code='sh000300',  # 修改为沪深300的正确代码
         start_date=start_date,
         end_date=end_date
     )
