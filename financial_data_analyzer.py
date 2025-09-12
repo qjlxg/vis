@@ -203,29 +203,58 @@ def get_fund_data(code, sdate='', edate='', proxies=None):
     try:
         response = getURL(url, proxies=proxies)
         content_match = re.search(r'content:"(.*?)"', response.text)
+        
         if not content_match:
             raise ValueError("未找到净值表格内容")
+            
         html_content = content_match.group(1).encode('utf-8').decode('unicode_escape')
-        tree = etree.HTML(html_content)
-        rows = tree.xpath("//tbody/tr")
-        if not rows:
-            raise ValueError("未找到净值表格")
         
-        data = []
-        for row in rows:
-            cols = row.xpath("./td/text()")
-            if len(cols) >= 7:
+        # --- 新增的文本解析逻辑 ---
+        # 检查是否为纯文本格式
+        if "净值日期单位净值" in html_content:
+            print("识别为纯文本净值数据，使用新方法解析...")
+            # 使用正则表达式匹配每一条净值记录
+            rows = re.findall(r'(\d{4}-\d{2}-\d{2})([\d.]+)([\d.]+)([-+]?\d+\.\d+%)', html_content)
+            data = []
+            for row in rows:
                 data.append({
-                    '净值日期': cols[0].strip(),
-                    '单位净值': cols[1].strip(),
-                    '累计净值': cols[2].strip(),
-                    '日增长率': cols[3].strip(),
-                    '申购状态': cols[4].strip(),
-                    '赎回状态': cols[5].strip(),
-                    '分红送配': cols[6].strip()
+                    '净值日期': row[0],
+                    '单位净值': row[1],
+                    '累计净值': row[2],
+                    '日增长率': row[3]
                 })
+            
+            if not data:
+                raise ValueError("纯文本解析数据为空")
+                
+            df = pd.DataFrame(data)
+            df['申购状态'] = '开放申购'
+            df['赎回状态'] = '开放赎回'
+            df['分红送配'] = ''
         
-        df = pd.DataFrame(data)
+        else:
+            # --- 保留原有的lxml解析逻辑作为备用 ---
+            print("识别为HTML表格数据，使用lxml解析...")
+            tree = etree.HTML(html_content)
+            rows = tree.xpath("//tbody/tr")
+            if not rows:
+                raise ValueError("未找到净值表格")
+            
+            data = []
+            for row in rows:
+                cols = row.xpath("./td/text()")
+                if len(cols) >= 7:
+                    data.append({
+                        '净值日期': cols[0].strip(),
+                        '单位净值': cols[1].strip(),
+                        '累计净值': cols[2].strip(),
+                        '日增长率': cols[3].strip(),
+                        '申购状态': cols[4].strip(),
+                        '赎回状态': cols[5].strip(),
+                        '分红送配': cols[6].strip()
+                    })
+            df = pd.DataFrame(data)
+            
         if df.empty:
             raise ValueError("解析数据为空")
         
@@ -511,7 +540,7 @@ def main_analyzer():
     fund_codes = fund_info['代码'].tolist()
     print(f"过滤后只保留场外C类基金：{len(fund_info)} 只")
 
-    fund_codes_to_process = fund_codes[:100]
+    fund_codes_to_process = fund_codes[:80]
     print(f"测试模式：仅处理前 {len(fund_codes_to_process)} 只场外C类基金")
 
     print("开始获取基金排名并筛选...")
