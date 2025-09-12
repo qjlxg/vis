@@ -190,6 +190,7 @@ def get_fund_data(code, sdate='', edate=''):
             
         html_content = content_match.group(1).encode('utf-8').decode('unicode_escape')
         
+        # 尝试首先解析纯文本格式
         if "净值日期单位净值" in html_content:
             print("识别为纯文本净值数据，使用新方法解析...")
             rows = re.findall(r'(\d{4}-\d{2}-\d{2})([\d.]+)([\d.]+)([-+]?\d+\.\d+%)', html_content)
@@ -247,7 +248,7 @@ def get_fund_data(code, sdate='', edate=''):
     except Exception as e:
         print(f"解析净值数据失败 ({e})，尝试 akshare...")
         try:
-            df = ak.fund_open_fund_daily_em(symbol=code, start_date=sdate, end_date=edate)
+            df = ak.fund_open_fund_daily_em(code, start_date=sdate, end_date=edate)
             if df.empty:
                 raise ValueError("akshare 数据为空")
             df['净值日期'] = pd.to_datetime(df['净值日期'], format='mixed', errors='coerce')
