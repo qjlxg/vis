@@ -17,7 +17,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.9'  # 升级到3.9
+        python-version: '3.9'
 
     - name: Install dependencies
       run: |
@@ -26,7 +26,8 @@ jobs:
 
     - name: Run fund screener
       run: |
-        python fund_screener_cn_cclass.py
+        python fund_screener_cn_cclass.py 2>&1 | tee output.log
+        cat output.log
 
     - name: Upload output
       uses: actions/upload-artifact@v4
@@ -35,3 +36,4 @@ jobs:
         path: |
           recommended_cn_cclass_funds_2025.csv
           cn_fund_screener.log
+          output.log
