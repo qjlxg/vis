@@ -50,6 +50,7 @@ def getURL(url, tries_num=5, sleep_time=1, time_out=10, proxies=None):
     return None
 
 def get_fund_basic_info():
+    print("开始获取基金基本信息...")
     try:
         url = 'http://fund.eastmoney.com/js/fundcode_search.js'
         response = getURL(url)
@@ -81,78 +82,52 @@ def get_fund_basic_info():
     fund_codes_df = pd.DataFrame({'基金代码': fund_codes})
     fund_codes_df.to_csv(codes_path, index=False, encoding='utf-8')
     print(f"全量基金代码列表已保存至 '{codes_path}'（{len(fund_codes)} 只基金）")
-    
+    print("基金基本信息获取完成。")
     return fund_info_df
 
-def get_fund_rankings(fund_type='hh', start_date='2018-09-11', end_date='2025-09-11', proxies=None):
+def get_fund_rankings(fund_type='hh', proxies=None):
+    print("开始获取基金排名...")
     periods = {
-        '3y': (start_date, end_date),
-        '2y': (f"{int(end_date[:4])-2}{end_date[4:]}", end_date),
-        '1y': (f"{int(end_date[:4])-1}{end_date[4:]}", end_date),
-        '6m': (f"{int(end_date[:4])-(1 if int(end_date[5:7])<=6 else 0)}-{int(end_date[5:7])-6:02d}{end_date[7:]}", end_date),
-        '3m': (f"{int(end_date[:4])-(1 if int(end_date[5:7])<=3 else 0)}-{int(end_date[5:7])-3:02d}{end_date[7:]}", end_date)
+        '3y': '近3年', '2y': '近2年', '1y': '近1年',
+        '6m': '近6月', '3m': '近3月'
     }
-    all_data = []
     
-    for period, (sd, ed) in periods.items():
-        url = f'http://fund.eastmoney.com/data/rankhandler.aspx?op=dy&dt=kf&ft={fund_type}&rs=&gs=0&sc=qjzf&st=desc&sd={sd}&ed={ed}&es=1&qdii=&pi=1&pn=10000&dx=1'
-        try:
-            response = getURL(url, proxies=proxies)
-            if not response:
-                raise ValueError("无法获取响应")
-            content = response.text
-            content = re.sub(r'var rankData\s*=\s*({.*?});?', r'\1', content)
-            content = content.replace('datas:', '"datas":').replace('allRecords:', '"allRecords":').replace('success:', '"success":').replace('count:', '"count":')
-            content = re.sub(r'([,{])(\w+):', r'\1"\2":', content)
-            content = content.replace('\'', '"')
-            data = json.loads(content)
-            records = data['datas']
-            total = int(data['allRecords'])
+    try:
+        full_rank_df = ak.fund_open_fund_rank_em()
+        if not full_rank_df.empty:
+            print("成功使用 akshare 获取全量基金排名数据。")
+            full_rank_df['基金代码'] = full_rank_df['基金代码'].astype(str)
+            full_rank_df.set_index('基金代码', inplace=True)
+            df_final = pd.DataFrame()
             
-            df = pd.DataFrame([r.split(',') for r in records])
-            df = df[[0, 1, 3]].rename(columns={0: 'code', 1: 'name', 3: f'rose({period})'})
-            df[f'rose({period})'] = pd.to_numeric(df[f'rose({period})'].str.replace('%', ''), errors='coerce') / 100
-            df[f'rank({period})'] = range(1, len(df) + 1)
-            df[f'rank_r({period})'] = df[f'rank({period})'] / total
-            df.set_index('code', inplace=True)
-            all_data.append(df)
-            print(f"获取 {period} 排名数据：{len(df)} 条（总计 {total}）")
-        except json.JSONDecodeError as e:
-            print(f"获取 {period} 排名 JSON 解析失败: {e}，响应: {response.text[:100] if response else 'None'}")
-            try:
-                fallback_df = ak.fund_open_fund_rank_em()
-                fallback_df = fallback_df.head(500)
-                fallback_df['code'] = fallback_df['基金代码'].astype(str)
-                fallback_df['name'] = fallback_df['基金简称'] + 'C'
-                fallback_df[f'rose({period})'] = fallback_df.get('近1年', np.random.uniform(0.05, 0.20, len(fallback_df)))
-                fallback_df[f'rank({period})'] = range(1, len(fallback_df) + 1)
-                fallback_df[f'rank_r({period})'] = fallback_df[f'rank({period})'] / 5000
-                fallback_df.set_index('code', inplace=True)
-                df = fallback_df[[f'rose({period})', f'rank({period})', f'rank_r({period})']]
-                all_data.append(df)
-                print(f"使用 akshare fallback 获取 {period} 排名：{len(df)} 条")
-            except Exception as fallback_e:
-                print(f"akshare fallback 失败: {fallback_e}")
-                df = pd.DataFrame(columns=[f'rose({period})', f'rank({period})', f'rank_r({period})'])
-                all_data.append(df)
-        except Exception as e:
-            print(f"获取 {period} 排名失败: {e}")
+            total_records = len(full_rank_df)
+            
+            for period, col_name in periods.items():
+                if col_name in full_rank_df.columns:
+                    period_df = full_rank_df[['基金简称', col_name]].copy()
+                    period_df.rename(columns={'基金简称': 'name', col_name: f'rose({period})'}, inplace=True)
+                    period_df[f'rose({period})'] = pd.to_numeric(period_df[f'rose({period})'], errors='coerce') / 100
+                    period_df[f'rank({period})'] = period_df[f'rose({period})'].rank(method='min', ascending=False)
+                    period_df[f'rank_r({period})'] = period_df[f'rank({period})'] / total_records
+                    
+                    if df_final.empty:
+                        df_final = period_df
+                    else:
+                        df_final = df_final.join(period_df.drop('name', axis=1, errors='ignore'), how='outer')
+            
+            if not df_final.empty:
+                df_final.to_csv('fund_rankings.csv', encoding='gbk')
+                print(f"排名数据已保存至 'fund_rankings.csv'")
+                print("基金排名获取完成。")
+                return df_final
+    except Exception as e:
+        print(f"akshare 获取排名失败: {e}")
     
-    if all_data and any(not df.empty for df in all_data):
-        df_final = all_data[0].copy()
-        for df in all_data[1:]:
-            if not df.empty:
-                df_final = df_final.join(df, how='outer', lsuffix='_left', rsuffix=f'_{period}')
-        for col in df_final.columns:
-            if col.endswith('_left'):
-                df_final = df_final.drop(col, axis=1)
-        df_final.to_csv('fund_rankings.csv', encoding='gbk')
-        print(f"排名数据已保存至 'fund_rankings.csv'")
-        return df_final
-    print("所有排名数据获取失败，将使用推荐基金列表")
+    print("排名数据获取失败，将返回空 DataFrame。")
     return pd.DataFrame()
 
 def apply_4433_rule(df, total_records):
+    print("正在应用四四三三法则进行筛选...")
     thresholds = {
         '3y': 0.25, '2y': 0.25, '1y': 0.25,
         '6m': 1/3, '3m': 1/3
@@ -166,6 +141,7 @@ def apply_4433_rule(df, total_records):
     return filtered_df
 
 def get_fund_details(code, proxies=None):
+    print(f"开始获取基金 {code} 详情...")
     try:
         url = f'http://fund.eastmoney.com/f10/{code}.html'
         tables = pd.read_html(url)
@@ -193,15 +169,20 @@ def get_fund_details(code, proxies=None):
         df_sharpe = df_sharpe.apply(pd.to_numeric, errors='coerce')
         
         df_final = df_details.combine_first(df_sharpe)
+        print(f"成功获取基金 {code} 详情。")
         return df_final
     except Exception as e:
         print(f"获取基金 {code} 详情失败: {e}")
         return pd.DataFrame()
 
-def get_fund_data(code, sdate='', edate='', proxies=None):
+def get_fund_data(code, sdate='', edate=''):
+    print(f"开始获取基金 {code} 历史净值数据...")
     url = f'https://fundf10.eastmoney.com/F10DataApi.aspx?type=lsjz&code={code}&page=1&per=65535&sdate={sdate}&edate={edate}'
     try:
-        response = getURL(url, proxies=proxies)
+        response = getURL(url)
+        if not response:
+            raise ValueError("无法获取响应")
+            
         content_match = re.search(r'content:"(.*?)"', response.text)
         
         if not content_match:
@@ -212,6 +193,9 @@ def get_fund_data(code, sdate='', edate='', proxies=None):
         if "净值日期单位净值" in html_content:
             print("识别为纯文本净值数据，使用新方法解析...")
             rows = re.findall(r'(\d{4}-\d{2}-\d{2})([\d.]+)([\d.]+)([-+]?\d+\.\d+%)', html_content)
+            if not rows:
+                raise ValueError("纯文本解析数据为空")
+                
             data = []
             for row in rows:
                 data.append({
@@ -221,16 +205,12 @@ def get_fund_data(code, sdate='', edate='', proxies=None):
                     '日增长率': row[3]
                 })
             
-            if not data:
-                raise ValueError("纯文本解析数据为空")
-                
             df = pd.DataFrame(data)
             df['申购状态'] = '开放申购'
             df['赎回状态'] = '开放赎回'
             df['分红送配'] = ''
-        
         else:
-            print("识别为HTML表格数据，使用lxml解析...")
+            print("识别为HTML表格数据，尝试lxml解析...")
             tree = etree.HTML(html_content)
             rows = tree.xpath("//tbody/tr")
             if not rows:
@@ -250,7 +230,7 @@ def get_fund_data(code, sdate='', edate='', proxies=None):
                         '分红送配': cols[6].strip()
                     })
             df = pd.DataFrame(data)
-            
+
         if df.empty:
             raise ValueError("解析数据为空")
         
@@ -263,15 +243,14 @@ def get_fund_data(code, sdate='', edate='', proxies=None):
         
         print(f"成功获取 {code} 的 {len(df)} 条净值数据")
         return df
+
     except Exception as e:
-        print(f"lxml 解析失败 ({e})，尝试 akshare...")
+        print(f"解析净值数据失败 ({e})，尝试 akshare...")
         try:
-            full_df = ak.fund_open_fund_daily_em()
-            df = full_df[full_df['基金代码'] == code]
+            df = ak.fund_open_fund_daily_em(symbol=code, start_date=sdate, end_date=edate)
             if df.empty:
                 raise ValueError("akshare 数据为空")
             df['净值日期'] = pd.to_datetime(df['净值日期'], format='mixed', errors='coerce')
-            df = df[(df['净值日期'] >= sdate) & (df['净值日期'] <= edate)] if sdate and edate else df
             df['单位净值'] = pd.to_numeric(df['单位净值'], errors='coerce')
             df['累计净值'] = pd.to_numeric(df.get('累计净值', df['单位净值']), errors='coerce')
             df['日增长率'] = pd.to_numeric(df.get('日增长率', 0), errors='coerce')
@@ -281,18 +260,24 @@ def get_fund_data(code, sdate='', edate='', proxies=None):
             print(f"akshare 解析失败: {e}")
             return pd.DataFrame()
 
+
 def get_fund_holdings_with_selenium(fund_code):
+    print(f"开始使用 Selenium 获取基金 {fund_code} 持仓数据...")
     options = Options()
     options.add_argument('--headless')
     options.add_argument('--disable-gpu')
     options.add_argument('--no-sandbox')
     options.add_argument(f'user-agent={randHeader()["User-Agent"]}')
+    
+    print("正在安装 ChromeDriver...")
     service = Service(ChromeDriverManager().install())
     
     driver = None
     try:
+        print("正在启动 Chrome 浏览器...")
         driver = webdriver.Chrome(service=service, options=options)
         url = f'http://fundf10.eastmoney.com/ccmx_{fund_code}.html'
+        print(f"正在访问 {url}")
         driver.get(url)
         time.sleep(5)
 
@@ -358,8 +343,10 @@ def get_fund_holdings_with_selenium(fund_code):
     finally:
         if driver:
             driver.quit()
+        print("Chrome 浏览器已关闭。")
 
 def get_fund_managers(fund_code, proxies=None):
+    print(f"开始获取基金 {fund_code} 经理数据...")
     fund_url = f'http://fund.eastmoney.com/f10/jjjl_{fund_code}.html'
     try:
         res = getURL(fund_url)
@@ -390,29 +377,17 @@ def get_fund_managers(fund_code, proxies=None):
         print(f"获取基金经理数据失败: {e}")
         return []
 
-def analyze_fund(fund_code, start_date, end_date, use_yfinance=False):
-    data_source = 'yfinance' if use_yfinance else 'akshare'
-    if use_yfinance:
-        try:
-            data = yf.download(fund_code, start=start_date, end=end_date)['Close']
-            returns = data.pct_change().dropna()
-        except Exception as e:
-            print(f"yfinance 下载 {fund_code} 数据失败: {e}")
-            return {"error": "无法获取数据"}
-    else:
-        try:
-            df = get_fund_data(fund_code, sdate=start_date, edate=end_date)
-            if df.empty:
-                raise ValueError("净值数据为空")
-            returns = df['单位净值'].pct_change().dropna()
-        except Exception as e:
-            print(f"获取 {fund_code} 数据失败: {e}")
-            return {"error": "无法获取数据"}
-
-    if returns.empty:
-        return {"error": "没有足够的回报数据进行分析"}
-
+def analyze_fund(fund_code, start_date, end_date):
+    print(f"开始分析基金 {fund_code} 风险指标...")
     try:
+        df = get_fund_data(fund_code, sdate=start_date, edate=end_date)
+        if df.empty:
+            raise ValueError("净值数据为空，无法进行分析")
+        
+        returns = df['单位净值'].pct_change().dropna()
+        if returns.empty:
+            raise ValueError("没有足够的回报数据进行分析")
+
         annual_returns = returns.mean() * 252
         annual_volatility = returns.std() * np.sqrt(252)
         sharpe_ratio = (annual_returns - 0.03) / annual_volatility if annual_volatility != 0 else 0
@@ -427,8 +402,9 @@ def analyze_fund(fund_code, start_date, end_date, use_yfinance=False):
             "annual_volatility": float(annual_volatility),
             "sharpe_ratio": float(sharpe_ratio),
             "max_drawdown": float(max_drawdown),
-            "data_source": data_source
+            "data_source": "akshare"
         }
+        print(f"基金 {fund_code} 风险分析完成。")
         return result
     except Exception as e:
         print(f"分析基金 {fund_code} 风险参数失败: {e}")
@@ -437,11 +413,13 @@ def analyze_fund(fund_code, start_date, end_date, use_yfinance=False):
 # --- 指数估值函数：从 index_valuation_scraper.py 整合而来 ---
 INDEX_API_URL = 'https://danjuanfunds.com/djapi/index_eva/dj'
 def get_index_data():
+    print("开始获取指数估值数据...")
     try:
         response = requests.get(INDEX_API_URL, headers=randHeader(), timeout=10)
         response.raise_for_status()
         data = response.json()
         if data.get('data') and data['data'].get('items'):
+            print("成功获取指数估值数据。")
             return data['data']['items']
         else:
             print("错误：API返回的数据结构不正确或无数据。")
@@ -454,6 +432,7 @@ def get_index_data():
         return None
 
 def comprehensive_filter_indices(data):
+    print("正在筛选低估指数...")
     selected_indices = []
     pe_percentile_threshold = 0.20
     yeild_threshold = 0.03
@@ -464,9 +443,11 @@ def comprehensive_filter_indices(data):
         if pe_percentile is not None and yeild is not None:
             if pe_percentile < pe_percentile_threshold and yeild > yeild_threshold:
                 selected_indices.append(item)
+    print("低估指数筛选完成。")
     return selected_indices
 
 def save_to_csv(data, filename, fieldnames):
+    print(f"正在保存数据到 {filename}...")
     if not data:
         print(f"没有数据可保存到 {filename}。")
         return
@@ -524,13 +505,7 @@ def main_analyzer():
     fund_codes = fund_info['代码'].tolist()
     print(f"过滤后只保留场外C类基金：{len(fund_info)} 只")
 
-    fund_codes_to_process = fund_codes[:100]
-    print(f"测试模式：仅处理前 {len(fund_codes_to_process)} 只场外C类基金")
-
-    print("开始获取基金排名并筛选...")
-    end_date = datetime.now().strftime('%Y-%m-%d')
-    start_date = (datetime.now() - pd.DateOffset(years=3)).strftime('%Y-%m-%d')
-    rankings_df = get_fund_rankings(fund_type='hh', start_date=start_date, end_date=end_date)
+    rankings_df = get_fund_rankings(fund_type='hh')
     
     if not rankings_df.empty:
         total_records = len(rankings_df)
@@ -542,26 +517,29 @@ def main_analyzer():
         recommended_path = 'recommended_cn_funds.csv'
         recommended_df.to_csv(recommended_path, encoding='gbk')
         print(f"推荐场外C类基金列表已保存至 '{recommended_path}'（{len(recommended_df)} 只基金）")
-        fund_codes = recommended_df.index.tolist()[:20]
+        fund_codes_to_analyze = recommended_df.index.tolist()[:20]
     else:
         print("排名数据为空，使用前 10 只场外C类基金继续处理")
-        fund_codes = fund_codes[:10]
+        fund_codes_to_analyze = fund_codes[:10]
     
     # 第三步：对筛选出的基金进行详细分析
     print("\n--- 第三步：开始对筛选出的基金进行详细分析 ---")
     all_fund_details = []
-    for i, fund_code in enumerate(fund_codes, 1):
-        print(f"[{i}/{len(fund_codes)}] 处理场外C类基金 {fund_code}...")
+    
+    # 获取日期范围
+    end_date = datetime.now().strftime('%Y-%m-%d')
+    start_date = (datetime.now() - pd.DateOffset(years=3)).strftime('%Y-%m-%d')
+    
+    for i, fund_code in enumerate(fund_codes_to_analyze, 1):
+        print(f"[{i}/{len(fund_codes_to_analyze)}] 处理场外C类基金 {fund_code}...")
         
         fund_data = {
             "fund_code": fund_code,
             "fund_details": get_fund_details(fund_code).to_dict('records') if not get_fund_details(fund_code).empty else {},
             "fund_holdings": get_fund_holdings_with_selenium(fund_code),
-            "fund_managers": get_fund_managers(fund_code)
+            "fund_managers": get_fund_managers(fund_code),
+            "risk_metrics": analyze_fund(fund_code, start_date, end_date)
         }
-        
-        analysis_result = analyze_fund(fund_code, start_date, end_date, use_yfinance=False)
-        fund_data["risk_metrics"] = analysis_result
         
         all_fund_details.append(fund_data)
         
@@ -569,6 +547,7 @@ def main_analyzer():
     with open(comprehensive_analysis_path, 'w', encoding='utf-8') as f:
         json.dump(all_fund_details, f, indent=4, ensure_ascii=False)
     print(f"\n所有基金的详细分析结果已整合并保存至 '{comprehensive_analysis_path}'。")
+    print("脚本运行完成。")
 
 if __name__ == '__main__':
     main_analyzer()
