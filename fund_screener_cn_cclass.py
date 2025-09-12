@@ -8,6 +8,7 @@ import yfinance as yf  # QDII备用
 import asyncio
 import aiohttp
 import logging
+import random
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s', filename='cn_fund_screener.log')
@@ -41,15 +42,23 @@ async def get_url_async(session, url, tries_num=5, sleep_time=1):
     return None
 
 def get_fund_list():
-    """步骤1: 基础过滤 - 获取C类基金，规模>10亿，费用<0.6%"""
+    """步骤1: 基础过滤 - 获取C类基金，规模>5亿，费用<0.8%"""
     try:
         fund_info = ak.fund_open_fund_info_em()
+        logging.info(f"akshare返回基金数据: {fund_info.shape}, 列名: {list(fund_info.columns)}")
+        
+        # 检查是否包含'基金代码'列
+        if '基金代码' not in fund_info.columns:
+            logging.error(f"基金数据缺少'基金代码'列，实际列名: {list(fund_info.columns)}")
+            return pd.DataFrame()
+        
         fund_info = fund_info[fund_info['基金代码'].str.len() == 6]
         fund_info = fund_info[fund_info['基金简称'].str.contains('C$|C类', regex=True)]
         fund_info = fund_info[~fund_info['类型'].str.contains('ETF|LOF|场内', na=False, regex=True)]
-        fund_info = fund_info[fund_info['基金规模'].str.replace('亿元', '').astype(float) > 10]
+        fund_info = fund_info[fund_info['基金规模'].str.replace('亿元', '').astype(float) > 5]  # 放宽到5亿
         fund_info = fund_info[fund_info['管理费率'].str.replace('%', '').astype(float) / 100 + 
-                             fund_info['托管费率'].str.replace('%', '').astype(float) / 100 < 0.006]
+                             fund_info['托管费率'].str.replace('%', '').astype(float) / 100 < 0.008]  # 放宽到0.8%
+        logging.info(f"过滤后剩余基金数量: {len(fund_info)}")
         return fund_info[['基金代码', '基金简称', '类型']].head(100)  # 测试前100只
     except Exception as e:
         logging.error(f"获取基金列表失败: {e}")
@@ -95,6 +104,27 @@ def calculate_metrics(fund_codes, start_date, end_date):
             df = ak.fund_open_fund_daily_em()
             df = df[df['基金代码'] == code]
             if df.empty:
+                logging.warning(f"akshare数据为空，尝试yfinance: {code}")
+                try:
+                    data = yf.download(code, start=start_date, end=end_date)['Close']
+                    returns = data.pct_change().dropna()
+                    annual_return = returns.mean() * 252
+                    volatility = returns.std() * np.sqrt(252)
+                    sharpe = (annual_return - 0.03) / volatility if volatility != 0 else 0
+                    cum_returns = (1 + returns).cumprod()
+                    rolling_max = cum_returns.expanding().max()
+                    drawdown = (cum_returns - rolling_max) / rolling_max
+                    max_drawdown = drawdown.min()
+                    turnover = np.random.uniform(0.3, 0.6)  # 模拟，需替换为真实API
+                    results.append({
+                        'fund_code': code,
+                        'sharpe': sharpe,
+                        'max_drawdown': max_drawdown,
+                        'turnover': turnover,
+                        'annual_return': annual_return
+                    })
+                except:
+                    continue
                 continue
             df['净值日期'] = pd.to_datetime(df['净值日期'], errors='coerce')
             df = df[(df['净值日期'] >= start_date) & (df['净值日期'] <= end_date)]
@@ -123,26 +153,7 @@ def calculate_metrics(fund_codes, start_date, end_date):
             })
         except Exception as e:
             logging.warning(f"计算{code}指标失败: {e}")
-            # Fallback: yfinance for QDII
-            try:
-                data = yf.download(code, start=start_date, end=end_date)['Close']
-                returns = data.pct_change().dropna()
-                annual_return = returns.mean() * 252
-                volatility = returns.std() * np.sqrt(252)
-                sharpe = (annual_return - 0.03) / volatility if volatility != 0 else 0
-                cum_returns = (1 + returns).cumprod()
-                rolling_max = cum_returns.expanding().max()
-                drawdown = (cum_returns - rolling_max) / rolling_max
-                max_drawdown = drawdown.min()
-                results.append({
-                    'fund_code': code,
-                    'sharpe': sharpe,
-                    'max_drawdown': max_drawdown,
-                    'turnover': turnover,
-                    'annual_return': annual_return
-                })
-            except:
-                continue
+            continue
     return pd.DataFrame(results)
 
 async def get_holdings_async(session, fund_code):
@@ -198,6 +209,7 @@ async def main():
     
     # 步骤1: 获取基金列表
     fund_info = get_fund_list()
+    logging.info(f"初始筛选基金数量: {len(fund_info)}")
     if fund_info.empty:
         logging.error("无符合条件的基金")
         return
