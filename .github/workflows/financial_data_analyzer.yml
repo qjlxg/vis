@@ -2,9 +2,14 @@ name: Financial Data Analyzer
 
 on:
   workflow_dispatch:  # 允许手动触发
-  # 如果需要定时运行，可以取消下面这行的注释
-  # schedule:
-  #   - cron: '0 1 * * 1'  # 每周一上午 9 点 (UTC+8) 自动运行
+  push:
+    branches:
+      - main # 在 main 分支上检测文件改动
+    paths:
+      - 'financial_data_analyzer.py'
+      - 'financial_data_analyzer.yml'
+  schedule:
+    - cron: '15 12 * * *' # 每天北京时间 20:15 自动运行 (UTC 12:15)
 
 jobs:
   run-python-script:
@@ -13,7 +18,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
-
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }} 
+        
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
@@ -26,14 +33,16 @@ jobs:
 
     - name: Run Python script
       run: python financial_data_analyzer.py
-      
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: financial-data-results
-        path: |
-          all_index_valuation.csv
-          selected_low_valuation_indices.csv
-          recommended_cn_funds.csv
-          fund_analysis_*.json
-          risk_metrics_*.json
+
+    - name: Configure Git
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        
+    - name: Add and Commit changes
+      run: |
+        git add all_index_valuation.csv selected_low_valuation_indices.csv recommended_cn_funds.csv comprehensive_fund_analysis.json
+        git commit -m "Automated update: Financial data analysis results" || echo "No changes to commit."
+
+    - name: Push changes
+      run: git push
