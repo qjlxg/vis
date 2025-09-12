@@ -44,7 +44,8 @@ async def get_url_async(session, url, tries_num=5, sleep_time=1):
 def get_fund_list():
     """步骤1: 基础过滤 - 获取C类基金，规模>5亿，费用<0.8%"""
     try:
-        fund_info = ak.fund_open_fund_info_em(symbol="全部", indicator="基本信息")
+        # 使用fund_em_open_fund_info接口获取基本信息
+        fund_info = ak.fund_em_open_fund_info(fund="000001", indicator="基本信息")
         logging.info(f"akshare返回基金数据: {fund_info.shape}, 列名: {list(fund_info.columns)}")
         
         # 检查是否包含'基金代码'列
