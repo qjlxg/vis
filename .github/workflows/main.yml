@@ -19,9 +19,11 @@ jobs:
         with:
           python-version: '3.8'
 
-      - name: Install dependencies
-        run: |
-          pip install pandas numpy matplotlib seaborn requests akshare
+      - name: Install akshare first
+        run: pip install akshare
+
+      - name: Install other dependencies
+        run: pip install pandas numpy matplotlib seaborn requests
 
       - name: Run fund analysis script
         run: python fund_analysis.py
