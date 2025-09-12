@@ -35,7 +35,7 @@ jobs:
 
       # (可选) 上传生成的图表作为 artifacts
       - name: Upload charts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4  # <-- 这一行已经更新
         with:
           name: fund-analysis-charts
           path: |
