@@ -2,5 +2,5 @@ akshare
 pandas
 numpy
 yfinance
-aiohttp
+aiohttp>=3.11.13
 requests
