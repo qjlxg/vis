@@ -209,11 +209,8 @@ def get_fund_data(code, sdate='', edate='', proxies=None):
             
         html_content = content_match.group(1).encode('utf-8').decode('unicode_escape')
         
-        # --- 新增的文本解析逻辑 ---
-        # 检查是否为纯文本格式
         if "净值日期单位净值" in html_content:
             print("识别为纯文本净值数据，使用新方法解析...")
-            # 使用正则表达式匹配每一条净值记录
             rows = re.findall(r'(\d{4}-\d{2}-\d{2})([\d.]+)([\d.]+)([-+]?\d+\.\d+%)', html_content)
             data = []
             for row in rows:
@@ -233,7 +230,6 @@ def get_fund_data(code, sdate='', edate='', proxies=None):
             df['分红送配'] = ''
         
         else:
-            # --- 保留原有的lxml解析逻辑作为备用 ---
             print("识别为HTML表格数据，使用lxml解析...")
             tree = etree.HTML(html_content)
             rows = tree.xpath("//tbody/tr")
@@ -352,11 +348,7 @@ def get_fund_holdings_with_selenium(fund_code):
                     traceback.print_exc()
                     continue
         
-        output_filename = f"fund_holdings_{fund_code}.json"
-        output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), output_filename)
-        with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(holdings_data, f, indent=4, ensure_ascii=False)
-        print(f"成功提取 {len(holdings_data)} 条持仓数据，并保存至 '{output_path}'。")
+        print(f"成功提取 {len(holdings_data)} 条持仓数据。")
         return holdings_data
     
     except Exception as e:
@@ -392,15 +384,7 @@ def get_fund_managers(fund_code, proxies=None):
                     result.append(manager_data)
                 except IndexError:
                     continue
-        output_dir = "fund_managers_data"
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        
-        output_filename = f"fund_managers_{fund_code}.json"
-        output_path = os.path.join(output_dir, output_filename)
-        with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(result, f, indent=4, ensure_ascii=False)
-        print(f"基金经理数据已保存至 '{output_path}'")
+        print(f"成功获取基金经理数据。")
         return result
     except Exception as e:
         print(f"获取基金经理数据失败: {e}")
@@ -540,7 +524,7 @@ def main_analyzer():
     fund_codes = fund_info['代码'].tolist()
     print(f"过滤后只保留场外C类基金：{len(fund_info)} 只")
 
-    fund_codes_to_process = fund_codes[:80]
+    fund_codes_to_process = fund_codes[:100]
     print(f"测试模式：仅处理前 {len(fund_codes_to_process)} 只场外C类基金")
 
     print("开始获取基金排名并筛选...")
@@ -565,32 +549,26 @@ def main_analyzer():
     
     # 第三步：对筛选出的基金进行详细分析
     print("\n--- 第三步：开始对筛选出的基金进行详细分析 ---")
+    all_fund_details = []
     for i, fund_code in enumerate(fund_codes, 1):
         print(f"[{i}/{len(fund_codes)}] 处理场外C类基金 {fund_code}...")
         
-        get_fund_details(fund_code)
-        get_fund_data(fund_code, sdate=start_date, edate=end_date)
-        get_fund_holdings_with_selenium(fund_code)
-        get_fund_managers(fund_code)
-        
-        analysis_filename = f"fund_analysis_{fund_code}.json"
-        risk_filename = f"risk_metrics_{fund_code}.json"
-        analysis_result = analyze_fund(fund_code, start_date, end_date, use_yfinance=False)
-        
-        analysis_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), analysis_filename)
-        with open(analysis_path, 'w', encoding='utf-8') as f:
-            json.dump(analysis_result, f, indent=4, ensure_ascii=False)
-        print(f"分析结果已保存至 '{analysis_path}'。")
-        
-        risk_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), risk_filename)
-        risk_data = {
+        fund_data = {
             "fund_code": fund_code,
-            "annual_returns": analysis_result.get("annual_returns", None),
-            "annual_volatility": analysis_result.get("annual_volatility", None)
+            "fund_details": get_fund_details(fund_code).to_dict('records') if not get_fund_details(fund_code).empty else {},
+            "fund_holdings": get_fund_holdings_with_selenium(fund_code),
+            "fund_managers": get_fund_managers(fund_code)
         }
-        with open(risk_path, 'w', encoding='utf-8') as f:
-            json.dump(risk_data, f, indent=4, ensure_ascii=False)
-        print(f"风险指标数据已保存至 '{risk_path}'。")
+        
+        analysis_result = analyze_fund(fund_code, start_date, end_date, use_yfinance=False)
+        fund_data["risk_metrics"] = analysis_result
+        
+        all_fund_details.append(fund_data)
+        
+    comprehensive_analysis_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'comprehensive_fund_analysis.json')
+    with open(comprehensive_analysis_path, 'w', encoding='utf-8') as f:
+        json.dump(all_fund_details, f, indent=4, ensure_ascii=False)
+    print(f"\n所有基金的详细分析结果已整合并保存至 '{comprehensive_analysis_path}'。")
 
 if __name__ == '__main__':
     main_analyzer()
