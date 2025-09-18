@@ -1,7 +1,33 @@
 [
     {
         "fund_code": "000796",
-        "fund_details": {},
+        "fund_details": [
+            {
+                "业绩比较基准": "沪深300指数收益率×65% +中债综合指数收益率(全价)×35%",
+                "份额规模": "0.2613亿份（截止至：2025年06月30日）",
+                "发行日期": "2014年09月23日",
+                "基金代码": "000796（前端）",
+                "基金全称": "宝盈睿丰创新灵活配置混合型证券投资基金",
+                "基金托管人": "广发证券",
+                "基金简称": "宝盈睿丰创新混合C",
+                "基金管理人": "宝盈基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "容志能、朱凯",
+                "夏普比率(近近1年)": 1.93,
+                "夏普比率(近近2年)": 0.63,
+                "夏普比率(近近3年)": 0.26,
+                "成立日期/规模": "2014年09月26日 / 8.614亿份",
+                "成立来分红": "每份累计0.00元（0次）",
+                "托管费率": "0.20%（每年）",
+                "最高申购费率": "0.00%（前端）",
+                "最高认购费率": "0.00%（前端）",
+                "最高赎回费率": "1.50%（前端）",
+                "管理费率": "1.20%（每年）",
+                "资产规模": "0.54亿元（截止至：2025年06月30日）",
+                "跟踪标的": "该基金无跟踪标的",
+                "销售服务费率": "0.80%（每年）"
+            }
+        ],
         "fund_holdings": [
             {
                 "stock_code": "300680",
@@ -81,33 +107,7 @@
     },
     {
         "fund_code": "000850",
-        "fund_details": [
-            {
-                "业绩比较基准": "中证800指数*60%+中债新综合指数*40%",
-                "份额规模": "1.2342亿份（截止至：2025年06月30日）",
-                "发行日期": "2014年10月27日",
-                "基金代码": "000850（前端）",
-                "基金全称": "汇丰晋信双核策略混合型证券投资基金",
-                "基金托管人": "交通银行",
-                "基金简称": "汇丰晋信双核策略混合C",
-                "基金管理人": "汇丰晋信基金",
-                "基金类型": "混合型-灵活",
-                "基金经理人": "韦钰",
-                "夏普比率(近近1年)": 2.64,
-                "夏普比率(近近2年)": 0.81,
-                "夏普比率(近近3年)": 0.43,
-                "成立日期/规模": "2014年11月26日 / 10.071亿份",
-                "成立来分红": "每份累计0.84元（4次）",
-                "托管费率": "0.20%（每年）",
-                "最高申购费率": "0.00%（前端）",
-                "最高认购费率": "0.00%（前端）",
-                "最高赎回费率": "1.50%（前端）",
-                "管理费率": "1.20%（每年）",
-                "资产规模": "1.63亿元（截止至：2025年06月30日）",
-                "跟踪标的": "该基金无跟踪标的",
-                "销售服务费率": "0.50%（每年）"
-            }
-        ],
+        "fund_details": [],
         "fund_holdings": [
             {
                 "stock_code": "603977",
@@ -187,33 +187,7 @@
     },
     {
         "fund_code": "001174",
-        "fund_details": [
-            {
-                "业绩比较基准": "上证科创板50成份指数收益率*80%+银行活期存款利率(税后)*20%",
-                "份额规模": "2.4488亿份（截止至：2025年06月30日）",
-                "发行日期": "2015年04月09日",
-                "基金代码": "001174（前端）",
-                "基金全称": "中欧瑾和灵活配置混合型证券投资基金",
-                "基金托管人": "工商银行",
-                "基金简称": "中欧瑾和灵活配置混合C",
-                "基金管理人": "中欧基金",
-                "基金类型": "混合型-灵活",
-                "基金经理人": "李帅",
-                "夏普比率(近近1年)": 2.13,
-                "夏普比率(近近2年)": 0.42,
-                "夏普比率(近近3年)": 0.21,
-                "成立日期/规模": "2015年04月13日 / 38.810亿份",
-                "成立来分红": "每份累计0.00元（0次）",
-                "托管费率": "0.20%（每年）",
-                "最高申购费率": "0.00%（前端）",
-                "最高认购费率": "0.00%（前端）",
-                "最高赎回费率": "1.50%（前端）",
-                "管理费率": "1.20%（每年）",
-                "资产规模": "3.32亿元（截止至：2025年06月30日）",
-                "跟踪标的": "该基金无跟踪标的",
-                "销售服务费率": "0.80%（每年）"
-            }
-        ],
+        "fund_details": [],
         "fund_holdings": [
             {
                 "stock_code": "688981",
@@ -286,7 +260,161 @@
                 "value": 4008.3
             }
         ],
-        "fund_managers": [],
+        "fund_managers": [
+            {
+                "fund_code": "001174",
+                "start_date": "019759",
+                "end_date": "中欧半导体产业股票发起A",
+                "fund_managers": "股票型",
+                "term": "2025-09-01",
+                "management_return": "至今",
+                "management_rank": "17天"
+            },
+            {
+                "fund_code": "001174",
+                "start_date": "019764",
+                "end_date": "中欧半导体产业股票发起C",
+                "fund_managers": "股票型",
+                "term": "2025-09-01",
+                "management_return": "至今",
+                "management_rank": "17天"
+            },
+            {
+                "fund_code": "001174",
+                "start_date": "013998",
+                "end_date": "中欧瑾添混合A",
+                "fund_managers": "混合型-偏债",
+                "term": "2023-06-19",
+                "management_return": "2024-08-23",
+                "management_rank": "1年又66天"
+            },
+            {
+                "fund_code": "001174",
+                "start_date": "013999",
+                "end_date": "中欧瑾添混合C",
+                "fund_managers": "混合型-偏债",
+                "term": "2023-06-19",
+                "management_return": "2024-08-23",
+                "management_rank": "1年又66天"
+            },
+            {
+                "fund_code": "001174",
+                "start_date": "017288",
+                "end_date": "中欧瑾和灵活配置混合E",
+                "fund_managers": "混合型-灵活",
+                "term": "2022-11-21",
+                "management_return": "至今",
+                "management_rank": "2年又302天"
+            },
+            {
+                "fund_code": "001174",
+                "start_date": "016847",
+                "end_date": "中欧高端装备股票发起A",
+                "fund_managers": "股票型",
+                "term": "2022-11-14",
+                "management_return": "至今",
+                "management_rank": "2年又309天"
+            },
+            {
+                "fund_code": "001174",
+                "start_date": "016848",
+                "end_date": "中欧高端装备股票发起C",
+                "fund_managers": "股票型",
+                "term": "2022-11-14",
+                "management_return": "至今",
+                "management_rank": "2年又309天"
+            },
+            {
+                "fund_code": "001174",
+                "start_date": "012557",
+                "end_date": "中欧景气前瞻一年混合A",
+                "fund_managers": "混合型-偏股",
+                "term": "2021-08-13",
+                "management_return": "至今",
+                "management_rank": "4年又37天"
+            },
+            {
+                "fund_code": "001174",
+                "start_date": "012558",
+                "end_date": "中欧景气前瞻一年混合C",
+                "fund_managers": "混合型-偏股",
+                "term": "2021-08-13",
+                "management_return": "至今",
+                "management_rank": "4年又37天"
+            },
+            {
+                "fund_code": "001174",
+                "start_date": "012390",
+                "end_date": "中欧产业前瞻混合A",
+                "fund_managers": "混合型-偏股",
+                "term": "2021-06-16",
+                "management_return": "至今",
+                "management_rank": "4年又95天"
+            },
+            {
+                "fund_code": "001174",
+                "start_date": "012391",
+                "end_date": "中欧产业前瞻混合C",
+                "fund_managers": "混合型-偏股",
+                "term": "2021-06-16",
+                "management_return": "至今",
+                "management_rank": "4年又95天"
+            },
+            {
+                "fund_code": "001174",
+                "start_date": "001173",
+                "end_date": "中欧瑾和灵活配置混合A",
+                "fund_managers": "混合型-灵活",
+                "term": "2021-05-10",
+                "management_return": "至今",
+                "management_rank": "4年又132天"
+            },
+            {
+                "fund_code": "001174",
+                "start_date": "001174",
+                "end_date": "中欧瑾和灵活配置混合C",
+                "fund_managers": "混合型-灵活",
+                "term": "2021-05-10",
+                "management_return": "至今",
+                "management_rank": "4年又132天"
+            },
+            {
+                "fund_code": "001174",
+                "start_date": "070006",
+                "end_date": "嘉实服务增值行业混合",
+                "fund_managers": "混合型-灵活",
+                "term": "2017-11-23",
+                "management_return": "2019-11-19",
+                "management_rank": "1年又361天"
+            },
+            {
+                "fund_code": "001174",
+                "start_date": "001039",
+                "end_date": "嘉实先进制造股票",
+                "fund_managers": "股票型",
+                "term": "2017-03-20",
+                "management_return": "2017-09-12",
+                "management_rank": "176天"
+            },
+            {
+                "fund_code": "001174",
+                "start_date": "070003",
+                "end_date": "嘉实稳健混合",
+                "fund_managers": "混合型-偏股",
+                "term": "2017-03-20",
+                "management_return": "2017-09-12",
+                "management_rank": "176天"
+            },
+            {
+                "fund_code": "001174",
+                "start_date": "001577",
+                "end_date": "嘉实低价策略股票",
+                "fund_managers": "股票型",
+                "term": "2015-07-27",
+                "management_return": "2020-10-19",
+                "management_rank": "5年又86天"
+            }
+        ],
         "risk_metrics": {
             "error": "风险参数计算失败"
         }
@@ -305,9 +433,9 @@
                 "基金管理人": "鹏华基金",
                 "基金类型": "混合型-灵活",
                 "基金经理人": "刘方正",
-                "夏普比率(近近1年)": 2.75,
-                "夏普比率(近近2年)": 0.54,
-                "夏普比率(近近3年)": 0.4,
+                "夏普比率(近近1年)": 2.71,
+                "夏普比率(近近2年)": 0.53,
+                "夏普比率(近近3年)": 0.39,
                 "成立日期/规模": "2015年05月25日 / 23.315亿份",
                 "成立来分红": "每份累计0.21元（4次）",
                 "托管费率": "0.15%（每年）",
@@ -398,7 +526,7 @@
                 "fund_managers": "混合型-偏债",
                 "term": "2025-08-27",
                 "management_return": "至今",
-                "management_rank": "21天"
+                "management_rank": "22天"
             },
             {
                 "fund_code": "001326",
@@ -407,7 +535,7 @@
                 "fund_managers": "混合型-偏债",
                 "term": "2025-08-27",
                 "management_return": "至今",
-                "management_rank": "21天"
+                "management_rank": "22天"
             },
             {
                 "fund_code": "001326",
@@ -416,7 +544,7 @@
                 "fund_managers": "债券型-混合二级",
                 "term": "2025-07-08",
                 "management_return": "至今",
-                "management_rank": "71天"
+                "management_rank": "72天"
             },
             {
                 "fund_code": "001326",
@@ -425,7 +553,7 @@
                 "fund_managers": "债券型-混合二级",
                 "term": "2024-10-31",
                 "management_return": "至今",
-                "management_rank": "321天"
+                "management_rank": "322天"
             },
             {
                 "fund_code": "001326",
@@ -434,7 +562,7 @@
                 "fund_managers": "债券型-混合二级",
                 "term": "2024-10-31",
                 "management_return": "至今",
-                "management_rank": "321天"
+                "management_rank": "322天"
             },
             {
                 "fund_code": "001326",
@@ -443,7 +571,7 @@
                 "fund_managers": "混合型-灵活",
                 "term": "2024-10-28",
                 "management_return": "至今",
-                "management_rank": "324天"
+                "management_rank": "325天"
             },
             {
                 "fund_code": "001326",
@@ -452,7 +580,7 @@
                 "fund_managers": "混合型-灵活",
                 "term": "2024-10-28",
                 "management_return": "至今",
-                "management_rank": "324天"
+                "management_rank": "325天"
             },
             {
                 "fund_code": "001326",
@@ -461,7 +589,7 @@
                 "fund_managers": "债券型-混合二级",
                 "term": "2024-10-16",
                 "management_return": "至今",
-                "management_rank": "336天"
+                "management_rank": "337天"
             },
             {
                 "fund_code": "001326",
@@ -470,7 +598,7 @@
                 "fund_managers": "混合型-灵活",
                 "term": "2024-10-14",
                 "management_return": "至今",
-                "management_rank": "338天"
+                "management_rank": "339天"
             },
             {
                 "fund_code": "001326",
@@ -479,7 +607,7 @@
                 "fund_managers": "混合型-灵活",
                 "term": "2024-10-11",
                 "management_return": "至今",
-                "management_rank": "341天"
+                "management_rank": "342天"
             },
             {
                 "fund_code": "001326",
@@ -497,7 +625,7 @@
                 "fund_managers": "混合型-灵活",
                 "term": "2024-09-24",
                 "management_return": "至今",
-                "management_rank": "358天"
+                "management_rank": "359天"
             },
             {
                 "fund_code": "001326",
@@ -506,7 +634,7 @@
                 "fund_managers": "混合型-灵活",
                 "term": "2024-09-24",
                 "management_return": "至今",
-                "management_rank": "358天"
+                "management_rank": "359天"
             },
             {
                 "fund_code": "001326",
@@ -515,7 +643,7 @@
                 "fund_managers": "混合型-灵活",
                 "term": "2024-07-25",
                 "management_return": "至今",
-                "management_rank": "1年又54天"
+                "management_rank": "1年又55天"
             },
             {
                 "fund_code": "001326",
@@ -560,7 +688,7 @@
                 "fund_managers": "混合型-灵活",
                 "term": "2022-10-20",
                 "management_return": "至今",
-                "management_rank": "2年又333天"
+                "management_rank": "2年又334天"
             },
             {
                 "fund_code": "001326",
@@ -569,7 +697,7 @@
                 "fund_managers": "混合型-灵活",
                 "term": "2018-05-30",
                 "management_return": "至今",
-                "management_rank": "7年又112天"
+                "management_rank": "7年又113天"
             },
             {
                 "fund_code": "001326",
@@ -776,7 +904,7 @@
                 "fund_managers": "混合型-灵活",
                 "term": "2015-05-25",
                 "management_return": "至今",
-                "management_rank": "10年又118天"
+                "management_rank": "10年又119天"
             },
             {
                 "fund_code": "001326",
@@ -785,7 +913,7 @@
                 "fund_managers": "混合型-灵活",
                 "term": "2015-05-25",
                 "management_return": "至今",
-                "management_rank": "10年又118天"
+                "management_rank": "10年又119天"
             },
             {
                 "fund_code": "001326",
@@ -794,7 +922,7 @@
                 "fund_managers": "混合型-灵活",
                 "term": "2015-05-25",
                 "management_return": "至今",
-                "management_rank": "10年又118天"
+                "management_rank": "10年又119天"
             },
             {
                 "fund_code": "001326",
@@ -803,7 +931,7 @@
                 "fund_managers": "混合型-灵活",
                 "term": "2015-05-25",
                 "management_return": "至今",
-                "management_rank": "10年又118天"
+                "management_rank": "10年又119天"
             },
             {
                 "fund_code": "001326",
@@ -857,7 +985,7 @@
     },
     {
         "fund_code": "001407",
-        "fund_details": [],
+        "fund_details": {},
         "fund_holdings": [
             {
                 "stock_code": "300502",
@@ -1016,303 +1144,6 @@
         }
     },
     {
-        "fund_code": "001467",
-        "fund_details": {},
-        "fund_holdings": [
-            {
-                "stock_code": "600489",
-                "stock_name": "中金黄金",
-                "proportion": 9.93,
-                "shares": 16.97,
-                "value": 248.27
-            },
-            {
-                "stock_code": "002155",
-                "stock_name": "湖南黄金",
-                "proportion": 9.84,
-                "shares": 13.79,
-                "value": 246.15
-            },
-            {
-                "stock_code": "000975",
-                "stock_name": "山金国际",
-                "proportion": 9.77,
-                "shares": 12.9,
-                "value": 244.33
-            },
-            {
-                "stock_code": "601899",
-                "stock_name": "紫金矿业",
-                "proportion": 9.71,
-                "shares": 12.45,
-                "value": 242.78
-            },
-            {
-                "stock_code": "600988",
-                "stock_name": "赤峰黄金",
-                "proportion": 9.45,
-                "shares": 9.5,
-                "value": 236.36
-            },
-            {
-                "stock_code": "002237",
-                "stock_name": "恒邦股份",
-                "proportion": 9.44,
-                "shares": 20.01,
-                "value": 236.12
-            },
-            {
-                "stock_code": "601069",
-                "stock_name": "西部黄金",
-                "proportion": 9.42,
-                "shares": 11.58,
-                "value": 235.65
-            },
-            {
-                "stock_code": "600547",
-                "stock_name": "山东黄金",
-                "proportion": 9.11,
-                "shares": 7.14,
-                "value": 227.98
-            },
-            {
-                "stock_code": "001337",
-                "stock_name": "四川黄金",
-                "proportion": 6.31,
-                "shares": 6.51,
-                "value": 157.74
-            },
-            {
-                "stock_code": "000426",
-                "stock_name": "兴业银锡",
-                "proportion": 6.29,
-                "shares": 9.96,
-                "value": 157.37
-            }
-        ],
-        "fund_managers": [
-            {
-                "fund_code": "001467",
-                "start_date": "023331",
-                "end_date": "华富中证A500指数A",
-                "fund_managers": "指数型-股票",
-                "term": "2025-08-19",
-                "management_return": "至今",
-                "management_rank": "29天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "023332",
-                "end_date": "华富中证A500指数C",
-                "fund_managers": "指数型-股票",
-                "term": "2025-08-19",
-                "management_return": "至今",
-                "management_rank": "29天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "024770",
-                "end_date": "华富中证全指自由现金流ETF联接A",
-                "fund_managers": "指数型-股票",
-                "term": "2025-07-25",
-                "management_return": "至今",
-                "management_rank": "54天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "024771",
-                "end_date": "华富中证全指自由现金流ETF联接C",
-                "fund_managers": "指数型-股票",
-                "term": "2025-07-25",
-                "management_return": "至今",
-                "management_rank": "54天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "024365",
-                "end_date": "华富华证沪深港汽车制造主题指数型发起式A",
-                "fund_managers": "指数型-股票",
-                "term": "2025-06-10",
-                "management_return": "至今",
-                "management_rank": "99天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "024366",
-                "end_date": "华富华证沪深港汽车制造主题指数型发起式C",
-                "fund_managers": "指数型-股票",
-                "term": "2025-06-10",
-                "management_return": "至今",
-                "management_rank": "99天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "023746",
-                "end_date": "华富新华中诚信红利价值指数A",
-                "fund_managers": "指数型-股票",
-                "term": "2025-05-07",
-                "management_return": "至今",
-                "management_rank": "133天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "023747",
-                "end_date": "华富新华中诚信红利价值指数C",
-                "fund_managers": "指数型-股票",
-                "term": "2025-05-07",
-                "management_return": "至今",
-                "management_rank": "133天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "561870",
-                "end_date": "华富中证全指自由现金流ETF",
-                "fund_managers": "指数型-股票",
-                "term": "2025-04-29",
-                "management_return": "至今",
-                "management_rank": "141天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "561880",
-                "end_date": "华富中证A100ETF",
-                "fund_managers": "指数型-股票",
-                "term": "2025-01-15",
-                "management_return": "至今",
-                "management_rank": "245天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "022661",
-                "end_date": "华富中证A100ETF联接C",
-                "fund_managers": "指数型-股票",
-                "term": "2024-11-21",
-                "management_return": "至今",
-                "management_rank": "300天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "019198",
-                "end_date": "华富灵活配置混合C",
-                "fund_managers": "混合型-灵活",
-                "term": "2023-09-07",
-                "management_return": "至今",
-                "management_rank": "2年又11天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "001466",
-                "end_date": "华富永鑫灵活配置混合A",
-                "fund_managers": "混合型-灵活",
-                "term": "2023-03-24",
-                "management_return": "至今",
-                "management_rank": "2年又178天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "001467",
-                "end_date": "华富永鑫灵活配置混合C",
-                "fund_managers": "混合型-灵活",
-                "term": "2023-03-24",
-                "management_return": "至今",
-                "management_rank": "2年又178天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "008020",
-                "end_date": "华富中证人工智能产业ETF联接A",
-                "fund_managers": "指数型-股票",
-                "term": "2023-02-09",
-                "management_return": "至今",
-                "management_rank": "2年又221天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "008021",
-                "end_date": "华富中证人工智能产业ETF联接C",
-                "fund_managers": "指数型-股票",
-                "term": "2023-02-09",
-                "management_return": "至今",
-                "management_rank": "2年又221天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "016122",
-                "end_date": "华富中证科创创业50指数增强A",
-                "fund_managers": "指数型-股票",
-                "term": "2023-02-09",
-                "management_return": "2024-12-25",
-                "management_rank": "1年又320天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "016123",
-                "end_date": "华富中证科创创业50指数增强C",
-                "fund_managers": "指数型-股票",
-                "term": "2023-02-09",
-                "management_return": "2024-12-25",
-                "management_rank": "1年又320天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "515980",
-                "end_date": "华富中证人工智能产业ETF",
-                "fund_managers": "指数型-股票",
-                "term": "2023-02-09",
-                "management_return": "至今",
-                "management_rank": "2年又221天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "000398",
-                "end_date": "华富灵活配置混合A",
-                "fund_managers": "混合型-灵活",
-                "term": "2022-09-05",
-                "management_return": "至今",
-                "management_rank": "3年又13天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "410010",
-                "end_date": "华富中小企业100指数增强",
-                "fund_managers": "指数型-股票",
-                "term": "2021-11-17",
-                "management_return": "至今",
-                "management_rank": "3年又305天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "561800",
-                "end_date": "华富中证稀有金属主题ETF",
-                "fund_managers": "指数型-股票",
-                "term": "2021-08-11",
-                "management_return": "至今",
-                "management_rank": "4年又38天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "516980",
-                "end_date": "华富中证证券公司先锋策略ETF",
-                "fund_managers": "指数型-股票",
-                "term": "2021-06-28",
-                "management_return": "至今",
-                "management_rank": "4年又82天"
-            },
-            {
-                "fund_code": "001467",
-                "start_date": "410008",
-                "end_date": "华富中证A100ETF联接A",
-                "fund_managers": "指数型-股票",
-                "term": "2021-05-07",
-                "management_return": "至今",
-                "management_rank": "4年又134天"
-            }
-        ],
-        "risk_metrics": {
-            "error": "风险参数计算失败"
-        }
-    },
-    {
         "fund_code": "001557",
         "fund_details": [],
         "fund_holdings": [
@@ -1394,33 +1225,7 @@
     },
     {
         "fund_code": "001559",
-        "fund_details": [
-            {
-                "业绩比较基准": "中证医药卫生指数收益率*80%+中证综合债券指数收益率*20%",
-                "份额规模": "1.8196亿份（截止至：2025年06月30日）",
-                "发行日期": "2015年06月29日",
-                "基金代码": "001559（前端）",
-                "基金全称": "天弘医疗健康混合型证券投资基金",
-                "基金托管人": "招商证券",
-                "基金简称": "天弘医疗健康混合C",
-                "基金管理人": "天弘基金",
-                "基金类型": "混合型-偏股",
-                "基金经理人": "吕俏",
-                "夏普比率(近近1年)": 2.33,
-                "夏普比率(近近2年)": 0.52,
-                "夏普比率(近近3年)": 0.35,
-                "成立日期/规模": "2015年06月30日 / 0.100亿份",
-                "成立来分红": "每份累计0.00元（0次）",
-                "托管费率": "0.20%（每年）",
-                "最高申购费率": "0.00%（前端）",
-                "最高认购费率": "0.00%（前端）",
-                "最高赎回费率": "1.50%（前端）",
-                "管理费率": "1.20%（每年）",
-                "资产规模": "2.52亿元（截止至：2025年06月30日）",
-                "跟踪标的": "该基金无跟踪标的",
-                "销售服务费率": "0.40%（每年）"
-            }
-        ],
+        "fund_details": {},
         "fund_holdings": [
             {
                 "stock_code": "688046",
@@ -1501,7 +1306,7 @@
                 "fund_managers": "混合型-偏股",
                 "term": "2025-01-02",
                 "management_return": "至今",
-                "management_rank": "258天"
+                "management_rank": "259天"
             },
             {
                 "fund_code": "001559",
@@ -1510,7 +1315,7 @@
                 "fund_managers": "混合型-偏股",
                 "term": "2025-01-02",
                 "management_return": "至今",
-                "management_rank": "258天"
+                "management_rank": "259天"
             }
         ],
         "risk_metrics": {
@@ -1618,7 +1423,377 @@
                 "value": 110.41
             }
         ],
-        "fund_managers": [],
+        "fund_managers": [
+            {
+                "fund_code": "001593",
+                "start_date": "024855",
+                "end_date": "天弘沪深300指数量化增强A",
+                "fund_managers": "指数型-股票",
+                "term": "2025-08-19",
+                "management_return": "至今",
+                "management_rank": "30天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "024856",
+                "end_date": "天弘沪深300指数量化增强C",
+                "fund_managers": "指数型-股票",
+                "term": "2025-08-19",
+                "management_return": "至今",
+                "management_rank": "30天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "023895",
+                "end_date": "天弘上证科创板综合指数增强A",
+                "fund_managers": "指数型-股票",
+                "term": "2025-04-22",
+                "management_return": "至今",
+                "management_rank": "149天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "023896",
+                "end_date": "天弘上证科创板综合指数增强C",
+                "fund_managers": "指数型-股票",
+                "term": "2025-04-22",
+                "management_return": "至今",
+                "management_rank": "149天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "159685",
+                "end_date": "天弘中证1000增强ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2025-01-11",
+                "management_return": "至今",
+                "management_rank": "250天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "022960",
+                "end_date": "天弘创业板ETF联接Y",
+                "fund_managers": "指数型-股票",
+                "term": "2024-12-13",
+                "management_return": "至今",
+                "management_rank": "279天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "022559",
+                "end_date": "天弘中证高端装备制造指数增强E",
+                "fund_managers": "指数型-股票",
+                "term": "2024-11-07",
+                "management_return": "至今",
+                "management_rank": "315天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "021532",
+                "end_date": "天弘中证半导体材料设备主题指数发起A",
+                "fund_managers": "指数型-股票",
+                "term": "2024-06-04",
+                "management_return": "2025-06-26",
+                "management_rank": "1年又22天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "021533",
+                "end_date": "天弘中证半导体材料设备主题指数发起C",
+                "fund_managers": "指数型-股票",
+                "term": "2024-06-04",
+                "management_return": "2025-06-26",
+                "management_rank": "1年又22天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "159310",
+                "end_date": "天弘中证芯片产业ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2024-04-18",
+                "management_return": "至今",
+                "management_rank": "1年又153天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "019170",
+                "end_date": "天弘中证沪港深云计算产业ETF发起联接C",
+                "fund_managers": "指数型-股票",
+                "term": "2023-09-19",
+                "management_return": "2025-05-15",
+                "management_rank": "1年又239天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "019171",
+                "end_date": "天弘中证沪港深云计算产业ETF发起联接A",
+                "fund_managers": "指数型-股票",
+                "term": "2023-09-19",
+                "management_return": "2025-05-15",
+                "management_rank": "1年又239天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "012212",
+                "end_date": "天弘中证高端装备制造指数增强A",
+                "fund_managers": "指数型-股票",
+                "term": "2023-06-03",
+                "management_return": "至今",
+                "management_rank": "2年又108天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "012213",
+                "end_date": "天弘中证高端装备制造指数增强C",
+                "fund_managers": "指数型-股票",
+                "term": "2023-06-03",
+                "management_return": "至今",
+                "management_rank": "2年又108天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "012328",
+                "end_date": "天弘中证新能源指数增强A",
+                "fund_managers": "指数型-股票",
+                "term": "2022-07-13",
+                "management_return": "至今",
+                "management_rank": "3年又68天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "012329",
+                "end_date": "天弘中证新能源指数增强C",
+                "fund_managers": "指数型-股票",
+                "term": "2022-07-13",
+                "management_return": "至今",
+                "management_rank": "3年又68天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "159603",
+                "end_date": "天弘中证科创创业50ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2022-05-26",
+                "management_return": "2024-01-17",
+                "management_rank": "1年又236天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "001592",
+                "end_date": "天弘创业板ETF联接A",
+                "fund_managers": "指数型-股票",
+                "term": "2022-05-25",
+                "management_return": "至今",
+                "management_rank": "3年又117天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "001593",
+                "end_date": "天弘创业板ETF联接C",
+                "fund_managers": "指数型-股票",
+                "term": "2022-05-25",
+                "management_return": "至今",
+                "management_rank": "3年又117天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "001629",
+                "end_date": "天弘中证计算机ETF联接A",
+                "fund_managers": "指数型-股票",
+                "term": "2022-05-25",
+                "management_return": "至今",
+                "management_rank": "3年又117天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "001630",
+                "end_date": "天弘中证计算机ETF联接C",
+                "fund_managers": "指数型-股票",
+                "term": "2022-05-25",
+                "management_return": "至今",
+                "management_rank": "3年又117天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "159977",
+                "end_date": "天弘创业板ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2022-05-25",
+                "management_return": "至今",
+                "management_rank": "3年又117天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "159998",
+                "end_date": "天弘中证计算机ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2022-05-25",
+                "management_return": "至今",
+                "management_rank": "3年又117天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "517390",
+                "end_date": "天弘中证沪港深云计算产业ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2021-12-25",
+                "management_return": "2025-05-15",
+                "management_rank": "3年又142天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "517280",
+                "end_date": "天弘中证沪港深线上消费主题ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2021-11-30",
+                "management_return": "2023-06-03",
+                "management_rank": "1年又185天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "012559",
+                "end_date": "天弘中证沪港深科技龙头指数A",
+                "fund_managers": "指数型-股票",
+                "term": "2021-10-30",
+                "management_return": "2024-12-03",
+                "management_rank": "3年又35天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "012560",
+                "end_date": "天弘中证沪港深科技龙头指数C",
+                "fund_managers": "指数型-股票",
+                "term": "2021-10-30",
+                "management_return": "2024-12-03",
+                "management_rank": "3年又35天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "517660",
+                "end_date": "天弘中证沪港深物联网主题ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2021-10-30",
+                "management_return": "2024-04-20",
+                "management_rank": "2年又173天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "011839",
+                "end_date": "天弘中证人工智能A",
+                "fund_managers": "指数型-股票",
+                "term": "2021-08-21",
+                "management_return": "2025-03-01",
+                "management_rank": "3年又193天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "011840",
+                "end_date": "天弘中证人工智能C",
+                "fund_managers": "指数型-股票",
+                "term": "2021-08-21",
+                "management_return": "2025-03-01",
+                "management_rank": "3年又193天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "012552",
+                "end_date": "天弘中证芯片产业ETF发起式联接A",
+                "fund_managers": "指数型-股票",
+                "term": "2021-07-21",
+                "management_return": "至今",
+                "management_rank": "4年又60天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "012553",
+                "end_date": "天弘中证芯片产业ETF发起式联接C",
+                "fund_managers": "指数型-股票",
+                "term": "2021-07-21",
+                "management_return": "至今",
+                "management_rank": "4年又60天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "012894",
+                "end_date": "天弘中证科创创业50ETF联接A",
+                "fund_managers": "指数型-股票",
+                "term": "2021-07-16",
+                "management_return": "2024-04-20",
+                "management_rank": "2年又279天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "012895",
+                "end_date": "天弘中证科创创业50ETF联接C",
+                "fund_managers": "指数型-股票",
+                "term": "2021-07-16",
+                "management_return": "2024-04-20",
+                "management_rank": "2年又279天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "011512",
+                "end_date": "天弘中证新能源车A",
+                "fund_managers": "指数型-股票",
+                "term": "2021-04-10",
+                "management_return": "2025-03-01",
+                "management_rank": "3年又326天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "011513",
+                "end_date": "天弘中证新能源车C",
+                "fund_managers": "指数型-股票",
+                "term": "2021-04-10",
+                "management_return": "2025-03-01",
+                "management_rank": "3年又326天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "010955",
+                "end_date": "天弘中证智能汽车指数发起式A",
+                "fund_managers": "指数型-股票",
+                "term": "2021-01-20",
+                "management_return": "2025-03-01",
+                "management_rank": "4年又41天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "010956",
+                "end_date": "天弘中证智能汽车指数发起式C",
+                "fund_managers": "指数型-股票",
+                "term": "2021-01-20",
+                "management_return": "2025-03-01",
+                "management_rank": "4年又41天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "001617",
+                "end_date": "天弘中证电子ETF联接A",
+                "fund_managers": "指数型-股票",
+                "term": "2020-11-28",
+                "management_return": "至今",
+                "management_rank": "4年又295天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "001618",
+                "end_date": "天弘中证电子ETF联接C",
+                "fund_managers": "指数型-股票",
+                "term": "2020-11-28",
+                "management_return": "至今",
+                "management_rank": "4年又295天"
+            },
+            {
+                "fund_code": "001593",
+                "start_date": "159997",
+                "end_date": "天弘中证电子ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2020-11-28",
+                "management_return": "至今",
+                "management_rank": "4年又295天"
+            }
+        ],
         "risk_metrics": {
             "error": "风险参数计算失败"
         }
@@ -1637,9 +1812,9 @@
                 "基金管理人": "天弘基金",
                 "基金类型": "指数型-股票",
                 "基金经理人": "林心龙、洪明华",
-                "夏普比率(近近1年)": 2.82,
-                "夏普比率(近近2年)": 1.0,
-                "夏普比率(近近3年)": 0.63,
+                "夏普比率(近近1年)": 2.88,
+                "夏普比率(近近2年)": 1.02,
+                "夏普比率(近近3年)": 0.64,
                 "成立日期/规模": "2015年07月29日 / 0.100亿份",
                 "成立来分红": "每份累计0.00元（0次）",
                 "托管费率": "0.10%（每年）",
@@ -1749,7 +1924,377 @@
                 "value": 0.25
             }
         ],
-        "fund_managers": [],
+        "fund_managers": [
+            {
+                "fund_code": "001618",
+                "start_date": "024855",
+                "end_date": "天弘沪深300指数量化增强A",
+                "fund_managers": "指数型-股票",
+                "term": "2025-08-19",
+                "management_return": "至今",
+                "management_rank": "30天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "024856",
+                "end_date": "天弘沪深300指数量化增强C",
+                "fund_managers": "指数型-股票",
+                "term": "2025-08-19",
+                "management_return": "至今",
+                "management_rank": "30天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "023895",
+                "end_date": "天弘上证科创板综合指数增强A",
+                "fund_managers": "指数型-股票",
+                "term": "2025-04-22",
+                "management_return": "至今",
+                "management_rank": "149天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "023896",
+                "end_date": "天弘上证科创板综合指数增强C",
+                "fund_managers": "指数型-股票",
+                "term": "2025-04-22",
+                "management_return": "至今",
+                "management_rank": "149天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "159685",
+                "end_date": "天弘中证1000增强ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2025-01-11",
+                "management_return": "至今",
+                "management_rank": "250天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "022960",
+                "end_date": "天弘创业板ETF联接Y",
+                "fund_managers": "指数型-股票",
+                "term": "2024-12-13",
+                "management_return": "至今",
+                "management_rank": "279天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "022559",
+                "end_date": "天弘中证高端装备制造指数增强E",
+                "fund_managers": "指数型-股票",
+                "term": "2024-11-07",
+                "management_return": "至今",
+                "management_rank": "315天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "021532",
+                "end_date": "天弘中证半导体材料设备主题指数发起A",
+                "fund_managers": "指数型-股票",
+                "term": "2024-06-04",
+                "management_return": "2025-06-26",
+                "management_rank": "1年又22天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "021533",
+                "end_date": "天弘中证半导体材料设备主题指数发起C",
+                "fund_managers": "指数型-股票",
+                "term": "2024-06-04",
+                "management_return": "2025-06-26",
+                "management_rank": "1年又22天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "159310",
+                "end_date": "天弘中证芯片产业ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2024-04-18",
+                "management_return": "至今",
+                "management_rank": "1年又153天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "019170",
+                "end_date": "天弘中证沪港深云计算产业ETF发起联接C",
+                "fund_managers": "指数型-股票",
+                "term": "2023-09-19",
+                "management_return": "2025-05-15",
+                "management_rank": "1年又239天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "019171",
+                "end_date": "天弘中证沪港深云计算产业ETF发起联接A",
+                "fund_managers": "指数型-股票",
+                "term": "2023-09-19",
+                "management_return": "2025-05-15",
+                "management_rank": "1年又239天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "012212",
+                "end_date": "天弘中证高端装备制造指数增强A",
+                "fund_managers": "指数型-股票",
+                "term": "2023-06-03",
+                "management_return": "至今",
+                "management_rank": "2年又108天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "012213",
+                "end_date": "天弘中证高端装备制造指数增强C",
+                "fund_managers": "指数型-股票",
+                "term": "2023-06-03",
+                "management_return": "至今",
+                "management_rank": "2年又108天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "012328",
+                "end_date": "天弘中证新能源指数增强A",
+                "fund_managers": "指数型-股票",
+                "term": "2022-07-13",
+                "management_return": "至今",
+                "management_rank": "3年又68天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "012329",
+                "end_date": "天弘中证新能源指数增强C",
+                "fund_managers": "指数型-股票",
+                "term": "2022-07-13",
+                "management_return": "至今",
+                "management_rank": "3年又68天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "159603",
+                "end_date": "天弘中证科创创业50ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2022-05-26",
+                "management_return": "2024-01-17",
+                "management_rank": "1年又236天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "001592",
+                "end_date": "天弘创业板ETF联接A",
+                "fund_managers": "指数型-股票",
+                "term": "2022-05-25",
+                "management_return": "至今",
+                "management_rank": "3年又117天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "001593",
+                "end_date": "天弘创业板ETF联接C",
+                "fund_managers": "指数型-股票",
+                "term": "2022-05-25",
+                "management_return": "至今",
+                "management_rank": "3年又117天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "001629",
+                "end_date": "天弘中证计算机ETF联接A",
+                "fund_managers": "指数型-股票",
+                "term": "2022-05-25",
+                "management_return": "至今",
+                "management_rank": "3年又117天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "001630",
+                "end_date": "天弘中证计算机ETF联接C",
+                "fund_managers": "指数型-股票",
+                "term": "2022-05-25",
+                "management_return": "至今",
+                "management_rank": "3年又117天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "159977",
+                "end_date": "天弘创业板ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2022-05-25",
+                "management_return": "至今",
+                "management_rank": "3年又117天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "159998",
+                "end_date": "天弘中证计算机ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2022-05-25",
+                "management_return": "至今",
+                "management_rank": "3年又117天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "517390",
+                "end_date": "天弘中证沪港深云计算产业ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2021-12-25",
+                "management_return": "2025-05-15",
+                "management_rank": "3年又142天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "517280",
+                "end_date": "天弘中证沪港深线上消费主题ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2021-11-30",
+                "management_return": "2023-06-03",
+                "management_rank": "1年又185天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "012559",
+                "end_date": "天弘中证沪港深科技龙头指数A",
+                "fund_managers": "指数型-股票",
+                "term": "2021-10-30",
+                "management_return": "2024-12-03",
+                "management_rank": "3年又35天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "012560",
+                "end_date": "天弘中证沪港深科技龙头指数C",
+                "fund_managers": "指数型-股票",
+                "term": "2021-10-30",
+                "management_return": "2024-12-03",
+                "management_rank": "3年又35天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "517660",
+                "end_date": "天弘中证沪港深物联网主题ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2021-10-30",
+                "management_return": "2024-04-20",
+                "management_rank": "2年又173天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "011839",
+                "end_date": "天弘中证人工智能A",
+                "fund_managers": "指数型-股票",
+                "term": "2021-08-21",
+                "management_return": "2025-03-01",
+                "management_rank": "3年又193天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "011840",
+                "end_date": "天弘中证人工智能C",
+                "fund_managers": "指数型-股票",
+                "term": "2021-08-21",
+                "management_return": "2025-03-01",
+                "management_rank": "3年又193天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "012552",
+                "end_date": "天弘中证芯片产业ETF发起式联接A",
+                "fund_managers": "指数型-股票",
+                "term": "2021-07-21",
+                "management_return": "至今",
+                "management_rank": "4年又60天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "012553",
+                "end_date": "天弘中证芯片产业ETF发起式联接C",
+                "fund_managers": "指数型-股票",
+                "term": "2021-07-21",
+                "management_return": "至今",
+                "management_rank": "4年又60天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "012894",
+                "end_date": "天弘中证科创创业50ETF联接A",
+                "fund_managers": "指数型-股票",
+                "term": "2021-07-16",
+                "management_return": "2024-04-20",
+                "management_rank": "2年又279天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "012895",
+                "end_date": "天弘中证科创创业50ETF联接C",
+                "fund_managers": "指数型-股票",
+                "term": "2021-07-16",
+                "management_return": "2024-04-20",
+                "management_rank": "2年又279天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "011512",
+                "end_date": "天弘中证新能源车A",
+                "fund_managers": "指数型-股票",
+                "term": "2021-04-10",
+                "management_return": "2025-03-01",
+                "management_rank": "3年又326天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "011513",
+                "end_date": "天弘中证新能源车C",
+                "fund_managers": "指数型-股票",
+                "term": "2021-04-10",
+                "management_return": "2025-03-01",
+                "management_rank": "3年又326天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "010955",
+                "end_date": "天弘中证智能汽车指数发起式A",
+                "fund_managers": "指数型-股票",
+                "term": "2021-01-20",
+                "management_return": "2025-03-01",
+                "management_rank": "4年又41天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "010956",
+                "end_date": "天弘中证智能汽车指数发起式C",
+                "fund_managers": "指数型-股票",
+                "term": "2021-01-20",
+                "management_return": "2025-03-01",
+                "management_rank": "4年又41天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "001617",
+                "end_date": "天弘中证电子ETF联接A",
+                "fund_managers": "指数型-股票",
+                "term": "2020-11-28",
+                "management_return": "至今",
+                "management_rank": "4年又295天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "001618",
+                "end_date": "天弘中证电子ETF联接C",
+                "fund_managers": "指数型-股票",
+                "term": "2020-11-28",
+                "management_return": "至今",
+                "management_rank": "4年又295天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "159997",
+                "end_date": "天弘中证电子ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2020-11-28",
+                "management_return": "至今",
+                "management_rank": "4年又295天"
+            }
+        ],
         "risk_metrics": {
             "error": "风险参数计算失败"
         }
@@ -1768,9 +2313,9 @@
                 "基金管理人": "平安基金",
                 "基金类型": "混合型-灵活",
                 "基金经理人": "林清源",
-                "夏普比率(近近1年)": 2.0,
-                "夏普比率(近近2年)": 0.71,
-                "夏普比率(近近3年)": 0.5,
+                "夏普比率(近近1年)": 2.08,
+                "夏普比率(近近2年)": 0.75,
+                "夏普比率(近近3年)": 0.53,
                 "成立日期/规模": "2015年12月11日 / 3.946亿份",
                 "成立来分红": "每份累计0.00元（0次）",
                 "托管费率": "0.10%（每年）",
@@ -1855,107 +2400,7 @@
                 "value": 234.3
             }
         ],
-        "fund_managers": [
-            {
-                "fund_code": "001665",
-                "start_date": "024534",
-                "end_date": "平安港股通科技精选混合A",
-                "fund_managers": "混合型-偏股",
-                "term": "2025-09-02",
-                "management_return": "至今",
-                "management_rank": "15天"
-            },
-            {
-                "fund_code": "001665",
-                "start_date": "024535",
-                "end_date": "平安港股通科技精选混合C",
-                "fund_managers": "混合型-偏股",
-                "term": "2025-09-02",
-                "management_return": "至今",
-                "management_rank": "15天"
-            },
-            {
-                "fund_code": "001665",
-                "start_date": "001664",
-                "end_date": "平安鑫安混合A",
-                "fund_managers": "混合型-灵活",
-                "term": "2024-07-03",
-                "management_return": "至今",
-                "management_rank": "1年又76天"
-            },
-            {
-                "fund_code": "001665",
-                "start_date": "001665",
-                "end_date": "平安鑫安混合C",
-                "fund_managers": "混合型-灵活",
-                "term": "2024-07-03",
-                "management_return": "至今",
-                "management_rank": "1年又76天"
-            },
-            {
-                "fund_code": "001665",
-                "start_date": "007049",
-                "end_date": "平安鑫安混合E",
-                "fund_managers": "混合型-灵活",
-                "term": "2024-07-03",
-                "management_return": "至今",
-                "management_rank": "1年又76天"
-            },
-            {
-                "fund_code": "001665",
-                "start_date": "167002",
-                "end_date": "平安鼎越混合(LOF)",
-                "fund_managers": "混合型-灵活",
-                "term": "2023-11-13",
-                "management_return": "至今",
-                "management_rank": "1年又309天"
-            },
-            {
-                "fund_code": "001665",
-                "start_date": "009828",
-                "end_date": "融通转型三动力灵活配置混合C",
-                "fund_managers": "混合型-灵活",
-                "term": "2020-07-29",
-                "management_return": "2023-02-18",
-                "management_rank": "2年又204天"
-            },
-            {
-                "fund_code": "001665",
-                "start_date": "161605",
-                "end_date": "融通蓝筹成长混合A/B",
-                "fund_managers": "混合型-灵活",
-                "term": "2020-05-27",
-                "management_return": "2023-02-18",
-                "management_rank": "2年又267天"
-            },
-            {
-                "fund_code": "001665",
-                "start_date": "000717",
-                "end_date": "融通转型三动力灵活配置混合A",
-                "fund_managers": "混合型-灵活",
-                "term": "2018-06-22",
-                "management_return": "2023-02-18",
-                "management_rank": "4年又242天"
-            },
-            {
-                "fund_code": "001665",
-                "start_date": "161611",
-                "end_date": "融通内需驱动混合A",
-                "fund_managers": "混合型-偏股",
-                "term": "2015-12-26",
-                "management_return": "2018-06-22",
-                "management_rank": "2年又179天"
-            },
-            {
-                "fund_code": "001665",
-                "start_date": "001150",
-                "end_date": "融通互联网传媒灵活配置混合",
-                "fund_managers": "混合型-灵活",
-                "term": "2015-05-12",
-                "management_return": "2016-07-26",
-                "management_rank": "1年又76天"
-            }
-        ],
+        "fund_managers": [],
         "risk_metrics": {
             "error": "风险参数计算失败"
         }
@@ -1974,9 +2419,9 @@
                 "基金管理人": "前海开源基金",
                 "基金类型": "混合型-灵活",
                 "基金经理人": "吴国清",
-                "夏普比率(近近1年)": 2.61,
-                "夏普比率(近近2年)": 1.41,
-                "夏普比率(近近3年)": 1.02,
+                "夏普比率(近近1年)": 2.77,
+                "夏普比率(近近2年)": 1.48,
+                "夏普比率(近近3年)": 1.07,
                 "成立日期/规模": "2016年12月26日 / 6.001亿份",
                 "成立来分红": "每份累计0.26元（4次）",
                 "托管费率": "0.10%（每年）",
@@ -2068,33 +2513,7 @@
     },
     {
         "fund_code": "001998",
-        "fund_details": [
-            {
-                "业绩比较基准": "45%×一年期人民币定期存款基准利率(税后)+40%×中证800指数收益率+15%×恒生指数收益率(经汇率调整)",
-                "份额规模": "0.2347亿份（截止至：2025年06月30日）",
-                "发行日期": "2016年08月31日",
-                "基金代码": "001998（前端）",
-                "基金全称": "工银瑞信新焦点灵活配置混合型证券投资基金",
-                "基金托管人": "招商银行",
-                "基金简称": "工银新焦点混合C",
-                "基金管理人": "工银瑞信基金",
-                "基金类型": "混合型-灵活",
-                "基金经理人": "李劭钊",
-                "夏普比率(近近1年)": 2.57,
-                "夏普比率(近近2年)": 0.86,
-                "夏普比率(近近3年)": 0.37,
-                "成立日期/规模": "2016年10月10日 / 6.464亿份",
-                "成立来分红": "每份累计0.00元（0次）",
-                "托管费率": "0.20%（每年）",
-                "最高申购费率": "0.00%（前端）",
-                "最高认购费率": "0.00%（前端）",
-                "最高赎回费率": "1.50%（前端）",
-                "管理费率": "1.00%（每年）",
-                "资产规模": "0.49亿元（截止至：2025年06月30日）",
-                "跟踪标的": "该基金无跟踪标的",
-                "销售服务费率": "0.60%（每年）"
-            }
-        ],
+        "fund_details": {},
         "fund_holdings": [
             {
                 "stock_code": "00981",
@@ -2186,9 +2605,9 @@
                 "基金管理人": "安信基金",
                 "基金类型": "混合型-灵活",
                 "基金经理人": "聂世林",
-                "夏普比率(近近1年)": 2.71,
-                "夏普比率(近近2年)": 0.75,
-                "夏普比率(近近3年)": 0.35,
+                "夏普比率(近近1年)": 2.76,
+                "夏普比率(近近2年)": 0.77,
+                "夏普比率(近近3年)": 0.37,
                 "成立日期/规模": "2015年11月17日 / --",
                 "成立来分红": "每份累计0.39元（3次）",
                 "托管费率": "0.20%（每年）",
@@ -2273,14 +2692,132 @@
                 "value": 4152.0
             }
         ],
-        "fund_managers": [],
+        "fund_managers": [
+            {
+                "fund_code": "002036",
+                "start_date": "017477",
+                "end_date": "安信睿见优选混合A",
+                "fund_managers": "混合型-偏股",
+                "term": "2023-04-25",
+                "management_return": "至今",
+                "management_rank": "2年又147天"
+            },
+            {
+                "fund_code": "002036",
+                "start_date": "017478",
+                "end_date": "安信睿见优选混合C",
+                "fund_managers": "混合型-偏股",
+                "term": "2023-04-25",
+                "management_return": "至今",
+                "management_rank": "2年又147天"
+            },
+            {
+                "fund_code": "002036",
+                "start_date": "014621",
+                "end_date": "安信楚盈一年持有混合A",
+                "fund_managers": "混合型-偏债",
+                "term": "2022-01-25",
+                "management_return": "2024-06-18",
+                "management_rank": "2年又145天"
+            },
+            {
+                "fund_code": "002036",
+                "start_date": "014622",
+                "end_date": "安信楚盈一年持有混合C",
+                "fund_managers": "混合型-偏债",
+                "term": "2022-01-25",
+                "management_return": "2024-06-18",
+                "management_rank": "2年又145天"
+            },
+            {
+                "fund_code": "002036",
+                "start_date": "011856",
+                "end_date": "安信均衡成长18个月持有混合A",
+                "fund_managers": "混合型-偏股",
+                "term": "2021-04-21",
+                "management_return": "至今",
+                "management_rank": "4年又151天"
+            },
+            {
+                "fund_code": "002036",
+                "start_date": "011857",
+                "end_date": "安信均衡成长18个月持有混合C",
+                "fund_managers": "混合型-偏股",
+                "term": "2021-04-21",
+                "management_return": "至今",
+                "management_rank": "4年又151天"
+            },
+            {
+                "fund_code": "002036",
+                "start_date": "009880",
+                "end_date": "安信成长动力一年持有混合",
+                "fund_managers": "混合型-偏股",
+                "term": "2020-08-13",
+                "management_return": "2025-07-01",
+                "management_rank": "4年又323天"
+            },
+            {
+                "fund_code": "002036",
+                "start_date": "008891",
+                "end_date": "安信价值成长混合A",
+                "fund_managers": "混合型-偏股",
+                "term": "2020-03-18",
+                "management_return": "至今",
+                "management_rank": "5年又185天"
+            },
+            {
+                "fund_code": "002036",
+                "start_date": "008892",
+                "end_date": "安信价值成长混合C",
+                "fund_managers": "混合型-偏股",
+                "term": "2020-03-18",
+                "management_return": "至今",
+                "management_rank": "5年又185天"
+            },
+            {
+                "fund_code": "002036",
+                "start_date": "003030",
+                "end_date": "安信新目标混合A",
+                "fund_managers": "混合型-灵活",
+                "term": "2017-05-24",
+                "management_return": "至今",
+                "management_rank": "8年又119天"
+            },
+            {
+                "fund_code": "002036",
+                "start_date": "003031",
+                "end_date": "安信新目标混合C",
+                "fund_managers": "混合型-灵活",
+                "term": "2017-05-24",
+                "management_return": "至今",
+                "management_rank": "8年又119天"
+            },
+            {
+                "fund_code": "002036",
+                "start_date": "001287",
+                "end_date": "安信优势增长混合A",
+                "fund_managers": "混合型-灵活",
+                "term": "2016-02-18",
+                "management_return": "至今",
+                "management_rank": "9年又215天"
+            },
+            {
+                "fund_code": "002036",
+                "start_date": "002036",
+                "end_date": "安信优势增长混合C",
+                "fund_managers": "混合型-灵活",
+                "term": "2016-02-18",
+                "management_return": "至今",
+                "management_rank": "9年又215天"
+            }
+        ],
         "risk_metrics": {
             "error": "风险参数计算失败"
         }
     },
     {
         "fund_code": "002052",
-        "fund_details": {},
+        "fund_details": [],
         "fund_holdings": [
             {
                 "stock_code": "300364",
@@ -2360,7 +2897,31 @@
     },
     {
         "fund_code": "002096",
-        "fund_details": {},
+        "fund_details": [
+            {
+                "业绩比较基准": "沪深300指数收益率×50%+中证综合债指数收益率×50%",
+                "份额规模": "2.4149亿份（截止至：2025年06月30日）",
+                "发行日期": "2016年01月27日",
+                "基金代码": "002096（前端）",
+                "基金全称": "博时新收益灵活配置混合型证券投资基金",
+                "基金托管人": "招商银行",
+                "基金简称": "博时新收益C",
+                "基金管理人": "博时基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "过钧",
+                "夏普比率(近近1年)": 3.08,
+                "夏普比率(近近2年)": 0.98,
+                "夏普比率(近近3年)": 0.29,
+                "成立日期/规模": "2016年02月04日 / 5.018亿份",
+                "成立来分红": "每份累计0.74元（18次）",
+                "托管费率": "0.15%（每年）",
+                "最高认购费率": "0.60%（前端）",
+                "管理费率": "0.50%（每年）",
+                "资产规模": "2.92亿元（截止至：2025年06月30日）",
+                "跟踪标的": "该基金无跟踪标的",
+                "销售服务费率": "0.10%（每年）"
+            }
+        ],
         "fund_holdings": [
             {
                 "stock_code": "601899",
@@ -2440,176 +3001,7 @@
     },
     {
         "fund_code": "002112",
-        "fund_details": [
-            {
-                "业绩比较基准": "一年期银行定期存款利率(税后)",
-                "份额规模": "4.7602亿份（截止至：2025年06月30日）",
-                "发行日期": "2015年06月08日",
-                "基金代码": "002112（前端）",
-                "基金全称": "德邦鑫星价值灵活配置混合型证券投资基金",
-                "基金托管人": "交通银行",
-                "基金简称": "德邦鑫星价值灵活配置混合C",
-                "基金管理人": "德邦基金",
-                "基金类型": "混合型-灵活",
-                "基金经理人": "雷涛、陆阳",
-                "夏普比率(近基金投资风格)": NaN,
-                "夏普比率(近报告期)": NaN,
-                "成立日期/规模": "2015年11月16日 / --",
-                "成立来分红": "每份累计0.15元（5次）",
-                "托管费率": "0.15%（每年）",
-                "最高申购费率": "0.00%（前端）",
-                "最高认购费率": "---（前端）",
-                "最高赎回费率": "1.50%（前端）",
-                "管理费率": "0.70%（每年）",
-                "资产规模": "8.28亿元（截止至：2025年06月30日）",
-                "跟踪标的": "该基金无跟踪标的",
-                "销售服务费率": "0.10%（每年）"
-            },
-            {
-                "业绩比较基准": "一年期银行定期存款利率(税后)",
-                "份额规模": "4.7602亿份（截止至：2025年06月30日）",
-                "发行日期": "2015年06月08日",
-                "基金代码": "002112（前端）",
-                "基金全称": "德邦鑫星价值灵活配置混合型证券投资基金",
-                "基金托管人": "交通银行",
-                "基金简称": "德邦鑫星价值灵活配置混合C",
-                "基金管理人": "德邦基金",
-                "基金类型": "混合型-灵活",
-                "基金经理人": "雷涛、陆阳",
-                "夏普比率(近基金投资风格)": NaN,
-                "夏普比率(近报告期)": NaN,
-                "成立日期/规模": "2015年11月16日 / --",
-                "成立来分红": "每份累计0.15元（5次）",
-                "托管费率": "0.15%（每年）",
-                "最高申购费率": "0.00%（前端）",
-                "最高认购费率": "---（前端）",
-                "最高赎回费率": "1.50%（前端）",
-                "管理费率": "0.70%（每年）",
-                "资产规模": "8.28亿元（截止至：2025年06月30日）",
-                "跟踪标的": "该基金无跟踪标的",
-                "销售服务费率": "0.10%（每年）"
-            },
-            {
-                "业绩比较基准": "一年期银行定期存款利率(税后)",
-                "份额规模": "4.7602亿份（截止至：2025年06月30日）",
-                "发行日期": "2015年06月08日",
-                "基金代码": "002112（前端）",
-                "基金全称": "德邦鑫星价值灵活配置混合型证券投资基金",
-                "基金托管人": "交通银行",
-                "基金简称": "德邦鑫星价值灵活配置混合C",
-                "基金管理人": "德邦基金",
-                "基金类型": "混合型-灵活",
-                "基金经理人": "雷涛、陆阳",
-                "夏普比率(近基金投资风格)": NaN,
-                "夏普比率(近报告期)": NaN,
-                "成立日期/规模": "2015年11月16日 / --",
-                "成立来分红": "每份累计0.15元（5次）",
-                "托管费率": "0.15%（每年）",
-                "最高申购费率": "0.00%（前端）",
-                "最高认购费率": "---（前端）",
-                "最高赎回费率": "1.50%（前端）",
-                "管理费率": "0.70%（每年）",
-                "资产规模": "8.28亿元（截止至：2025年06月30日）",
-                "跟踪标的": "该基金无跟踪标的",
-                "销售服务费率": "0.10%（每年）"
-            },
-            {
-                "业绩比较基准": "一年期银行定期存款利率(税后)",
-                "份额规模": "4.7602亿份（截止至：2025年06月30日）",
-                "发行日期": "2015年06月08日",
-                "基金代码": "002112（前端）",
-                "基金全称": "德邦鑫星价值灵活配置混合型证券投资基金",
-                "基金托管人": "交通银行",
-                "基金简称": "德邦鑫星价值灵活配置混合C",
-                "基金管理人": "德邦基金",
-                "基金类型": "混合型-灵活",
-                "基金经理人": "雷涛、陆阳",
-                "夏普比率(近基金投资风格)": NaN,
-                "夏普比率(近报告期)": NaN,
-                "成立日期/规模": "2015年11月16日 / --",
-                "成立来分红": "每份累计0.15元（5次）",
-                "托管费率": "0.15%（每年）",
-                "最高申购费率": "0.00%（前端）",
-                "最高认购费率": "---（前端）",
-                "最高赎回费率": "1.50%（前端）",
-                "管理费率": "0.70%（每年）",
-                "资产规模": "8.28亿元（截止至：2025年06月30日）",
-                "跟踪标的": "该基金无跟踪标的",
-                "销售服务费率": "0.10%（每年）"
-            },
-            {
-                "业绩比较基准": "一年期银行定期存款利率(税后)",
-                "份额规模": "4.7602亿份（截止至：2025年06月30日）",
-                "发行日期": "2015年06月08日",
-                "基金代码": "002112（前端）",
-                "基金全称": "德邦鑫星价值灵活配置混合型证券投资基金",
-                "基金托管人": "交通银行",
-                "基金简称": "德邦鑫星价值灵活配置混合C",
-                "基金管理人": "德邦基金",
-                "基金类型": "混合型-灵活",
-                "基金经理人": "雷涛、陆阳",
-                "夏普比率(近基金投资风格)": NaN,
-                "夏普比率(近报告期)": NaN,
-                "成立日期/规模": "2015年11月16日 / --",
-                "成立来分红": "每份累计0.15元（5次）",
-                "托管费率": "0.15%（每年）",
-                "最高申购费率": "0.00%（前端）",
-                "最高认购费率": "---（前端）",
-                "最高赎回费率": "1.50%（前端）",
-                "管理费率": "0.70%（每年）",
-                "资产规模": "8.28亿元（截止至：2025年06月30日）",
-                "跟踪标的": "该基金无跟踪标的",
-                "销售服务费率": "0.10%（每年）"
-            },
-            {
-                "业绩比较基准": "一年期银行定期存款利率(税后)",
-                "份额规模": "4.7602亿份（截止至：2025年06月30日）",
-                "发行日期": "2015年06月08日",
-                "基金代码": "002112（前端）",
-                "基金全称": "德邦鑫星价值灵活配置混合型证券投资基金",
-                "基金托管人": "交通银行",
-                "基金简称": "德邦鑫星价值灵活配置混合C",
-                "基金管理人": "德邦基金",
-                "基金类型": "混合型-灵活",
-                "基金经理人": "雷涛、陆阳",
-                "夏普比率(近基金投资风格)": NaN,
-                "夏普比率(近报告期)": NaN,
-                "成立日期/规模": "2015年11月16日 / --",
-                "成立来分红": "每份累计0.15元（5次）",
-                "托管费率": "0.15%（每年）",
-                "最高申购费率": "0.00%（前端）",
-                "最高认购费率": "---（前端）",
-                "最高赎回费率": "1.50%（前端）",
-                "管理费率": "0.70%（每年）",
-                "资产规模": "8.28亿元（截止至：2025年06月30日）",
-                "跟踪标的": "该基金无跟踪标的",
-                "销售服务费率": "0.10%（每年）"
-            },
-            {
-                "业绩比较基准": "一年期银行定期存款利率(税后)",
-                "份额规模": "4.7602亿份（截止至：2025年06月30日）",
-                "发行日期": "2015年06月08日",
-                "基金代码": "002112（前端）",
-                "基金全称": "德邦鑫星价值灵活配置混合型证券投资基金",
-                "基金托管人": "交通银行",
-                "基金简称": "德邦鑫星价值灵活配置混合C",
-                "基金管理人": "德邦基金",
-                "基金类型": "混合型-灵活",
-                "基金经理人": "雷涛、陆阳",
-                "夏普比率(近基金投资风格)": NaN,
-                "夏普比率(近报告期)": NaN,
-                "成立日期/规模": "2015年11月16日 / --",
-                "成立来分红": "每份累计0.15元（5次）",
-                "托管费率": "0.15%（每年）",
-                "最高申购费率": "0.00%（前端）",
-                "最高认购费率": "---（前端）",
-                "最高赎回费率": "1.50%（前端）",
-                "管理费率": "0.70%（每年）",
-                "资产规模": "8.28亿元（截止至：2025年06月30日）",
-                "跟踪标的": "该基金无跟踪标的",
-                "销售服务费率": "0.10%（每年）"
-            }
-        ],
+        "fund_details": {},
         "fund_holdings": [
             {
                 "stock_code": "300476",
@@ -2689,7 +3081,176 @@
     },
     {
         "fund_code": "002158",
-        "fund_details": {},
+        "fund_details": [
+            {
+                "业绩比较基准": "沪深300指数收益率*50%+中债综合指数收益率*50%",
+                "份额规模": "0.0287亿份（截止至：2025年06月30日）",
+                "发行日期": "2015年11月23日",
+                "基金代码": "002158（前端）",
+                "基金全称": "汇添富安鑫智选灵活配置混合型证券投资基金",
+                "基金托管人": "工商银行",
+                "基金简称": "汇添富安鑫智选混合C",
+                "基金管理人": "汇添富基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "李超",
+                "夏普比率(近基金投资风格)": NaN,
+                "夏普比率(近报告期)": NaN,
+                "成立日期/规模": "2015年11月26日 / 24.062亿份",
+                "成立来分红": "每份累计0.34元（6次）",
+                "托管费率": "0.20%（每年）",
+                "最高申购费率": "0.00%（前端）",
+                "最高认购费率": "0.00%（前端）",
+                "最高赎回费率": "1.50%（前端）",
+                "管理费率": "0.90%（每年）",
+                "资产规模": "0.02亿元（截止至：2025年06月30日）",
+                "跟踪标的": "该基金无跟踪标的",
+                "销售服务费率": "0.40%（每年）"
+            },
+            {
+                "业绩比较基准": "沪深300指数收益率*50%+中债综合指数收益率*50%",
+                "份额规模": "0.0287亿份（截止至：2025年06月30日）",
+                "发行日期": "2015年11月23日",
+                "基金代码": "002158（前端）",
+                "基金全称": "汇添富安鑫智选灵活配置混合型证券投资基金",
+                "基金托管人": "工商银行",
+                "基金简称": "汇添富安鑫智选混合C",
+                "基金管理人": "汇添富基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "李超",
+                "夏普比率(近基金投资风格)": NaN,
+                "夏普比率(近报告期)": NaN,
+                "成立日期/规模": "2015年11月26日 / 24.062亿份",
+                "成立来分红": "每份累计0.34元（6次）",
+                "托管费率": "0.20%（每年）",
+                "最高申购费率": "0.00%（前端）",
+                "最高认购费率": "0.00%（前端）",
+                "最高赎回费率": "1.50%（前端）",
+                "管理费率": "0.90%（每年）",
+                "资产规模": "0.02亿元（截止至：2025年06月30日）",
+                "跟踪标的": "该基金无跟踪标的",
+                "销售服务费率": "0.40%（每年）"
+            },
+            {
+                "业绩比较基准": "沪深300指数收益率*50%+中债综合指数收益率*50%",
+                "份额规模": "0.0287亿份（截止至：2025年06月30日）",
+                "发行日期": "2015年11月23日",
+                "基金代码": "002158（前端）",
+                "基金全称": "汇添富安鑫智选灵活配置混合型证券投资基金",
+                "基金托管人": "工商银行",
+                "基金简称": "汇添富安鑫智选混合C",
+                "基金管理人": "汇添富基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "李超",
+                "夏普比率(近基金投资风格)": NaN,
+                "夏普比率(近报告期)": NaN,
+                "成立日期/规模": "2015年11月26日 / 24.062亿份",
+                "成立来分红": "每份累计0.34元（6次）",
+                "托管费率": "0.20%（每年）",
+                "最高申购费率": "0.00%（前端）",
+                "最高认购费率": "0.00%（前端）",
+                "最高赎回费率": "1.50%（前端）",
+                "管理费率": "0.90%（每年）",
+                "资产规模": "0.02亿元（截止至：2025年06月30日）",
+                "跟踪标的": "该基金无跟踪标的",
+                "销售服务费率": "0.40%（每年）"
+            },
+            {
+                "业绩比较基准": "沪深300指数收益率*50%+中债综合指数收益率*50%",
+                "份额规模": "0.0287亿份（截止至：2025年06月30日）",
+                "发行日期": "2015年11月23日",
+                "基金代码": "002158（前端）",
+                "基金全称": "汇添富安鑫智选灵活配置混合型证券投资基金",
+                "基金托管人": "工商银行",
+                "基金简称": "汇添富安鑫智选混合C",
+                "基金管理人": "汇添富基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "李超",
+                "夏普比率(近基金投资风格)": NaN,
+                "夏普比率(近报告期)": NaN,
+                "成立日期/规模": "2015年11月26日 / 24.062亿份",
+                "成立来分红": "每份累计0.34元（6次）",
+                "托管费率": "0.20%（每年）",
+                "最高申购费率": "0.00%（前端）",
+                "最高认购费率": "0.00%（前端）",
+                "最高赎回费率": "1.50%（前端）",
+                "管理费率": "0.90%（每年）",
+                "资产规模": "0.02亿元（截止至：2025年06月30日）",
+                "跟踪标的": "该基金无跟踪标的",
+                "销售服务费率": "0.40%（每年）"
+            },
+            {
+                "业绩比较基准": "沪深300指数收益率*50%+中债综合指数收益率*50%",
+                "份额规模": "0.0287亿份（截止至：2025年06月30日）",
+                "发行日期": "2015年11月23日",
+                "基金代码": "002158（前端）",
+                "基金全称": "汇添富安鑫智选灵活配置混合型证券投资基金",
+                "基金托管人": "工商银行",
+                "基金简称": "汇添富安鑫智选混合C",
+                "基金管理人": "汇添富基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "李超",
+                "夏普比率(近基金投资风格)": NaN,
+                "夏普比率(近报告期)": NaN,
+                "成立日期/规模": "2015年11月26日 / 24.062亿份",
+                "成立来分红": "每份累计0.34元（6次）",
+                "托管费率": "0.20%（每年）",
+                "最高申购费率": "0.00%（前端）",
+                "最高认购费率": "0.00%（前端）",
+                "最高赎回费率": "1.50%（前端）",
+                "管理费率": "0.90%（每年）",
+                "资产规模": "0.02亿元（截止至：2025年06月30日）",
+                "跟踪标的": "该基金无跟踪标的",
+                "销售服务费率": "0.40%（每年）"
+            },
+            {
+                "业绩比较基准": "沪深300指数收益率*50%+中债综合指数收益率*50%",
+                "份额规模": "0.0287亿份（截止至：2025年06月30日）",
+                "发行日期": "2015年11月23日",
+                "基金代码": "002158（前端）",
+                "基金全称": "汇添富安鑫智选灵活配置混合型证券投资基金",
+                "基金托管人": "工商银行",
+                "基金简称": "汇添富安鑫智选混合C",
+                "基金管理人": "汇添富基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "李超",
+                "夏普比率(近基金投资风格)": NaN,
+                "夏普比率(近报告期)": NaN,
+                "成立日期/规模": "2015年11月26日 / 24.062亿份",
+                "成立来分红": "每份累计0.34元（6次）",
+                "托管费率": "0.20%（每年）",
+                "最高申购费率": "0.00%（前端）",
+                "最高认购费率": "0.00%（前端）",
+                "最高赎回费率": "1.50%（前端）",
+                "管理费率": "0.90%（每年）",
+                "资产规模": "0.02亿元（截止至：2025年06月30日）",
+                "跟踪标的": "该基金无跟踪标的",
+                "销售服务费率": "0.40%（每年）"
+            },
+            {
+                "业绩比较基准": "沪深300指数收益率*50%+中债综合指数收益率*50%",
+                "份额规模": "0.0287亿份（截止至：2025年06月30日）",
+                "发行日期": "2015年11月23日",
+                "基金代码": "002158（前端）",
+                "基金全称": "汇添富安鑫智选灵活配置混合型证券投资基金",
+                "基金托管人": "工商银行",
+                "基金简称": "汇添富安鑫智选混合C",
+                "基金管理人": "汇添富基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "李超",
+                "夏普比率(近基金投资风格)": NaN,
+                "夏普比率(近报告期)": NaN,
+                "成立日期/规模": "2015年11月26日 / 24.062亿份",
+                "成立来分红": "每份累计0.34元（6次）",
+                "托管费率": "0.20%（每年）",
+                "最高申购费率": "0.00%（前端）",
+                "最高认购费率": "0.00%（前端）",
+                "最高赎回费率": "1.50%（前端）",
+                "管理费率": "0.90%（每年）",
+                "资产规模": "0.02亿元（截止至：2025年06月30日）",
+                "跟踪标的": "该基金无跟踪标的",
+                "销售服务费率": "0.40%（每年）"
+            }
+        ],
         "fund_holdings": [
             {
                 "stock_code": "300014",
@@ -2762,7 +3323,89 @@
                 "value": 170.6
             }
         ],
-        "fund_managers": [],
+        "fund_managers": [
+            {
+                "fund_code": "002158",
+                "start_date": "017902",
+                "end_date": "汇添富双颐债券A",
+                "fund_managers": "债券型-混合二级",
+                "term": "2023-06-29",
+                "management_return": "2024-07-11",
+                "management_rank": "1年又13天"
+            },
+            {
+                "fund_code": "002158",
+                "start_date": "017903",
+                "end_date": "汇添富双颐债券C",
+                "fund_managers": "债券型-混合二级",
+                "term": "2023-06-29",
+                "management_return": "2024-07-11",
+                "management_rank": "1年又13天"
+            },
+            {
+                "fund_code": "002158",
+                "start_date": "010439",
+                "end_date": "汇添富稳健汇盈一年持有期混合",
+                "fund_managers": "混合型-偏债",
+                "term": "2022-12-12",
+                "management_return": "2024-09-26",
+                "management_rank": "1年又289天"
+            },
+            {
+                "fund_code": "002158",
+                "start_date": "001796",
+                "end_date": "汇添富安鑫智选混合A",
+                "fund_managers": "混合型-灵活",
+                "term": "2022-10-21",
+                "management_return": "至今",
+                "management_rank": "2年又333天"
+            },
+            {
+                "fund_code": "002158",
+                "start_date": "002158",
+                "end_date": "汇添富安鑫智选混合C",
+                "fund_managers": "混合型-灵活",
+                "term": "2022-10-21",
+                "management_return": "至今",
+                "management_rank": "2年又333天"
+            },
+            {
+                "fund_code": "002158",
+                "start_date": "000406",
+                "end_date": "汇添富双利增强债券A",
+                "fund_managers": "债券型-混合二级",
+                "term": "2022-05-25",
+                "management_return": "2024-04-03",
+                "management_rank": "1年又314天"
+            },
+            {
+                "fund_code": "002158",
+                "start_date": "000407",
+                "end_date": "汇添富双利增强债券C",
+                "fund_managers": "债券型-混合二级",
+                "term": "2022-05-25",
+                "management_return": "2024-04-03",
+                "management_rank": "1年又314天"
+            },
+            {
+                "fund_code": "002158",
+                "start_date": "010045",
+                "end_date": "汇添富稳健添盈一年持有混合",
+                "fund_managers": "混合型-偏债",
+                "term": "2022-03-07",
+                "management_return": "2024-09-25",
+                "management_rank": "2年又203天"
+            },
+            {
+                "fund_code": "002158",
+                "start_date": "010219",
+                "end_date": "汇添富稳健添益一年持有混合",
+                "fund_managers": "混合型-偏债",
+                "term": "2022-03-07",
+                "management_return": "至今",
+                "management_rank": "3年又196天"
+            }
+        ],
         "risk_metrics": {
             "error": "风险参数计算失败"
         }
@@ -2781,9 +3424,9 @@
                 "基金管理人": "东方基金",
                 "基金类型": "混合型-灵活",
                 "基金经理人": "严凯",
-                "夏普比率(近近1年)": 2.88,
-                "夏普比率(近近2年)": 0.93,
-                "夏普比率(近近3年)": 0.36,
+                "夏普比率(近近1年)": 3.03,
+                "夏普比率(近近2年)": 0.99,
+                "夏普比率(近近3年)": 0.39,
                 "成立日期/规模": "2015年11月20日 / --",
                 "成立来分红": "每份累计1.24元（4次）",
                 "托管费率": "0.20%（每年）",
@@ -2866,6 +3509,112 @@
                 "proportion": 2.75,
                 "shares": 7.17,
                 "value": 587.83
+            }
+        ],
+        "fund_managers": [],
+        "risk_metrics": {
+            "error": "风险参数计算失败"
+        }
+    },
+    {
+        "fund_code": "002170",
+        "fund_details": [
+            {
+                "业绩比较基准": "中证移动互联网指数×50% +中债综合指数×50%",
+                "份额规模": "6.9089亿份（截止至：2025年06月30日）",
+                "发行日期": "2015年05月18日",
+                "基金代码": "002170（前端）",
+                "基金全称": "东吴移动互联灵活配置混合型证券投资基金",
+                "基金托管人": "平安银行",
+                "基金简称": "东吴移动互联混合C",
+                "基金管理人": "东吴基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "刘元海",
+                "夏普比率(近近1年)": 3.18,
+                "夏普比率(近近2年)": 1.59,
+                "夏普比率(近近3年)": 1.19,
+                "成立日期/规模": "2015年11月26日 / --",
+                "成立来分红": "每份累计0.00元（0次）",
+                "托管费率": "0.20%（每年）",
+                "最高申购费率": "0.00%（前端）",
+                "最高认购费率": "---（前端）",
+                "最高赎回费率": "1.50%（前端）",
+                "管理费率": "1.20%（每年）",
+                "资产规模": "24.24亿元（截止至：2025年06月30日）",
+                "跟踪标的": "该基金无跟踪标的",
+                "销售服务费率": "0.20%（每年）"
+            }
+        ],
+        "fund_holdings": [
+            {
+                "stock_code": "300308",
+                "stock_name": "中际旭创",
+                "proportion": 9.72,
+                "shares": 288.0,
+                "value": 42007.68
+            },
+            {
+                "stock_code": "300502",
+                "stock_name": "新易盛",
+                "proportion": 9.64,
+                "shares": 328.0,
+                "value": 41662.56
+            },
+            {
+                "stock_code": "002463",
+                "stock_name": "沪电股份",
+                "proportion": 9.54,
+                "shares": 968.0,
+                "value": 41217.44
+            },
+            {
+                "stock_code": "603501",
+                "stock_name": "豪威集团",
+                "proportion": 9.51,
+                "shares": 322.0,
+                "value": 41103.3
+            },
+            {
+                "stock_code": "603005",
+                "stock_name": "晶方科技",
+                "proportion": 9.5,
+                "shares": 1445.75,
+                "value": 41044.84
+            },
+            {
+                "stock_code": "002920",
+                "stock_name": "德赛西威",
+                "proportion": 9.43,
+                "shares": 398.88,
+                "value": 40738.07
+            },
+            {
+                "stock_code": "002475",
+                "stock_name": "立讯精密",
+                "proportion": 8.51,
+                "shares": 1060.0,
+                "value": 36771.4
+            },
+            {
+                "stock_code": "300476",
+                "stock_name": "胜宏科技",
+                "proportion": 6.47,
+                "shares": 208.0,
+                "value": 27951.04
+            },
+            {
+                "stock_code": "002273",
+                "stock_name": "水晶光电",
+                "proportion": 5.55,
+                "shares": 1200.0,
+                "value": 23964.0
+            },
+            {
+                "stock_code": "601689",
+                "stock_name": "拓普集团",
+                "proportion": 5.47,
+                "shares": 500.0,
+                "value": 23625.0
             }
         ],
         "fund_managers": [],
