@@ -9,7 +9,7 @@ on:
       - 'financial_data_analyzer.py'
       - 'financial_data_analyzer.yml'
   schedule:
-    - cron: '15 12 * * *' # 每天北京时间 20:15 自动运行 (UTC 12:15)
+    - cron: '0 */3 * * *'
 
 jobs:
   run-python-script:
