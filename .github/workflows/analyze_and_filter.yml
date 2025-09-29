@@ -2,8 +2,8 @@ name: Financial Data Analyzer
 
 on:
   workflow_dispatch:  # 允许在GitHub上手动点击运行此工作流
-  # schedule:
-  #   - cron: '0 1 * * 1'  # 如果需要定时运行，可以取消这行的注释，例如：每周一上午9点（UTC+8）自动运行
+  schedule:
+  - cron: '0 */3 * * *'
 
 jobs:
   run-python-script:
