@@ -60,7 +60,10 @@ def load_cache(fund_code):
     if os.path.exists(cache_file):
         try:
             with open(cache_file, 'r') as f:
-                return json.load(f).get('last_page', 0)
+                cache = json.load(f)
+                last_page = cache.get('last_page', 0)
+                print(f"  -> 加载缓存 {cache_file}，上次抓取到第 {last_page} 页。")
+                return last_page
         except Exception as e:
             print(f"  -> 加载缓存 {cache_file} 失败: {e}")
             return 0
@@ -72,6 +75,7 @@ def save_cache(fund_code, last_page):
     try:
         with open(cache_file, 'w') as f:
             json.dump({'last_page': last_page}, f)
+        print(f"  -> 成功保存缓存到 {cache_file}，记录页数: {last_page}。")
     except Exception as e:
         print(f"  -> 保存缓存 {cache_file} 失败: {e}")
 
@@ -120,8 +124,8 @@ async def fetch_net_values(fund_code, session, semaphore):
                 
                 table = soup.find('table') 
                 if not table:
-                    print(f"   第 {page_index} 页未找到表格数据，可能是基金代码无效或无数据。")
-                    break
+                    print(f"   第 {page_index} 页未找到表格数据，基金代码 {fund_code} 可能无效或无数据。")
+                    return fund_code, f"无表格数据: 基金代码可能无效"
 
                 rows = table.find_all('tr')[1:] 
                 if not rows:
@@ -165,12 +169,12 @@ def save_to_csv(fund_code, data):
     output_path = os.path.join(OUTPUT_DIR, f"{fund_code}.csv")
     if not isinstance(data, list):
         print(f"   基金 {fund_code} 数据无效: {data}")
-        return False
+        return False, 0
 
     new_df = pd.DataFrame(data)
     if new_df.empty:
         print(f"   基金 {fund_code} 无新数据可保存。")
-        return False
+        return False, 0
 
     try:
         new_df['net_value'] = pd.to_numeric(new_df['net_value'], errors='coerce').round(4)
@@ -178,11 +182,13 @@ def save_to_csv(fund_code, data):
         new_df.dropna(subset=['date', 'net_value'], inplace=True)
     except Exception as e:
         print(f"   基金 {fund_code} 数据转换失败: {e}")
-        return False
+        return False, 0
     
+    old_record_count = 0
     if os.path.exists(output_path):
         try:
             existing_df = pd.read_csv(output_path, parse_dates=['date'], dtype={'net_value': float}, encoding='utf-8')
+            old_record_count = len(existing_df)
             combined_df = pd.concat([new_df, existing_df])
         except Exception as e:
             print(f"   读取现有 CSV 文件 {output_path} 失败: {e}")
@@ -196,11 +202,12 @@ def save_to_csv(fund_code, data):
     
     try:
         final_df.to_csv(output_path, index=False, encoding='utf-8')
-        print(f"   成功增量保存数据到 {output_path}，总记录数: {len(final_df)}。")
-        return True
+        new_record_count = len(final_df)
+        print(f"   成功增量保存数据到 {output_path}，总记录数: {new_record_count}（新增 {new_record_count - old_record_count} 条）。")
+        return True, new_record_count - old_record_count
     except Exception as e:
         print(f"   保存 CSV 文件 {output_path} 失败: {e}")
-        return False
+        return False, 0
 
 async def fetch_all_funds(fund_codes):
     """异步获取所有基金数据，控制并发"""
@@ -225,14 +232,19 @@ def main():
     results = asyncio.run(fetch_all_funds(fund_codes))
     
     success_count = 0
+    total_new_records = 0
     failed_codes = []
     for result in results:
         print("-" * 30)
         if isinstance(result, tuple) and len(result) == 2:
             fund_code, net_values = result
             if isinstance(net_values, list):
-                if save_to_csv(fund_code, net_values):
+                success, new_records = save_to_csv(fund_code, net_values)
+                if success:
                     success_count += 1
+                    total_new_records += new_records
+                else:
+                    failed_codes.append(fund_code)
             else:
                 print(f"处理基金 {fund_code} 时结果无效: {net_values}")
                 failed_codes.append(fund_code)
@@ -241,7 +253,7 @@ def main():
             failed_codes.append("未知基金代码")
     
     print(f"\n本次基金历史净值数据获取和保存完成。")
-    print(f"总结: 成功处理 {success_count} 个基金，失败 {len(failed_codes)} 个基金。")
+    print(f"总结: 成功处理 {success_count} 个基金，新增 {total_new_records} 条记录，失败 {len(failed_codes)} 个基金。")
     if failed_codes:
         print(f"失败的基金代码: {', '.join(failed_codes)}")
 
