@@ -9,11 +9,9 @@ def analyze_and_recommend_funds():
     print("--- 正在加载并分析文件，为您筛选最终结果 ---")
 
     try:
-        # 1. 读取所有文件
-        # *** 修改: 增加 encoding='gb18030' 解决中文CSV的 UnicodeDecodeError ***
-        selected_indices_df = pd.read_csv('selected_low_valuation_indices.csv', encoding='gb18030')
-        recommended_funds_df = pd.read_csv('recommended_cn_funds.csv', encoding='gb18030')
-        
+        # 1. 读取所有文件 - 解决方案：为中文 CSV 文件显式指定 encoding='utf-8'
+        selected_indices_df = pd.read_csv('selected_low_valuation_indices.csv', encoding='utf-8')
+        recommended_funds_df = pd.read_csv('recommended_cn_funds.csv', encoding='utf-8')
         with open('comprehensive_fund_analysis.json', 'r', encoding='utf-8') as f:
             comprehensive_analysis_json = json.load(f)
 
@@ -73,14 +71,23 @@ def analyze_and_recommend_funds():
                 # 提取风险指标
                 risk_metrics = details.get('risk_metrics', {})
 
+                # 确保风险指标是数字类型以便格式化，否则使用'N/A'
+                sharpe_ratio_formatted = f"{risk_metrics.get('sharpe_ratio', 'N/A'):.2f}" if isinstance(risk_metrics.get('sharpe_ratio'), (int, float)) else 'N/A'
+                max_drawdown_formatted = f"{risk_metrics.get('max_drawdown', 'N/A') * 100:.2f}%" if isinstance(risk_metrics.get('max_drawdown'), (int, float)) else 'N/A'
+                
+                # 提取基金经理信息，增加健壮性检查
+                fund_manager = 'N/A'
+                if details.get('fund_managers') and isinstance(details['fund_managers'], list) and details['fund_managers'] and 'fund_managers' in details['fund_managers'][0]:
+                    fund_manager = details['fund_managers'][0]['fund_managers']
+
                 final_recommendations.append({
                     '基金代码': fund_code,
                     '基金名称': fund['名称'],
                     '匹配行业': ', '.join([k for k in keywords if k in fund['名称']]),
                     '前五大持仓': top_holdings,
-                    '年化夏普比率': f"{risk_metrics.get('sharpe_ratio', 'N/A'):.2f}" if isinstance(risk_metrics.get('sharpe_ratio'), (int, float)) else 'N/A',
-                    '最大回撤': f"{risk_metrics.get('max_drawdown', 'N/A') * 100:.2f}%" if isinstance(risk_metrics.get('max_drawdown'), (int, float)) else 'N/A',
-                    '基金经理': details.get('fund_managers', [])[0]['fund_managers'] if details.get('fund_managers') and details.get('fund_managers')[0] and 'fund_managers' in details.get('fund_managers')[0] else 'N/A'
+                    '年化夏普比率': sharpe_ratio_formatted,
+                    '最大回撤': max_drawdown_formatted,
+                    '基金经理': fund_manager
                 })
 
         # 5. 打印最终结果
@@ -99,7 +106,9 @@ def analyze_and_recommend_funds():
                 print("前五大持仓：")
                 if item['前五大持仓']:
                     for holding in item['前五大持仓']:
-                        print(f"  - {holding.get('股票名称')} (占比: {holding.get('持仓占比')}%)")
+                        # 确保持仓占比字段存在且可打印
+                        proportion_str = f"{holding.get('持仓占比')}%" if holding.get('持仓占比') is not None else 'N/A'
+                        print(f"  - {holding.get('股票名称', 'N/A')} (占比: {proportion_str})")
                 else:
                     print("  - 暂无持仓数据")
 
