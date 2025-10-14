@@ -1,4 +1,4 @@
-name: Fetch Fund Net Value Data
+name: 净值更新Fetch Fund Net Value Data
 
 # 定义触发条件
 on:
