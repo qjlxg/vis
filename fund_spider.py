@@ -29,31 +29,48 @@ REQUEST_DELAY = 0.5  # 初始延迟，动态调整
 MAX_CONCURRENT = 5  # 最大并发基金数量
 
 def get_all_fund_codes(file_path):
-    """从文件（可能是 CSV 或 TXT）中读取基金代码，并尝试不同编码"""
+    """【加速读取】从文件（可能是 CSV 或 TXT）中读取基金代码，并尝试不同编码"""
     print(f"尝试读取基金代码文件 (仅读取 'code' 列或第一列): {file_path}")
     encodings_to_try = ['utf-8', 'utf-8-sig', 'gbk', 'latin-1']
-    codes = []
+    df = None
     
-    # 尝试按行读取，以适应您的 C类.txt 格式
     for encoding in encodings_to_try:
         try:
-            with open(file_path, 'r', encoding=encoding) as f:
-                raw_lines = f.readlines()
-                for line in raw_lines:
-                    code = line.strip()
-                    # 过滤掉可能的表头（如 'code'）和非数字行
-                    if code.isdigit() and len(code) >= 3:
-                        codes.append(code)
-                print(f"  -> 成功使用 {encoding} 编码按行读取文件，找到 {len(codes)} 个基金代码。")
-                return list(set(codes)) # 去重并返回
+            # 尝试按 CSV 格式读取，指定列
+            df = pd.read_csv(file_path, encoding=encoding, dtype={'code': str}, usecols=['code'])
+            print(f"  -> 成功使用 {encoding} 编码和 'code' 列读取文件。")
+            break
         except UnicodeDecodeError:
             continue
-        except Exception as e:
-            print(f"  -> 尝试使用 {encoding} 编码时发生错误: {e}")
-            continue
+        except ValueError:
+            try:
+                # 尝试不指定列名读取，适用于单列文本文件（如您的 C类.txt 格式）
+                df = pd.read_csv(file_path, encoding=encoding, header=None, dtype=str)
+                # 尝试重命名第一列为 'code'
+                df.columns = ['code'] + list(df.columns[1:])
+                print(f"  -> 成功使用 {encoding} 编码读取文件。")
+                break
+            except Exception:
+                continue
             
-    print("  -> 无法读取文件，请检查文件格式和编码。")
-    return []
+    if df is None:
+        print("  -> 无法读取文件，请检查文件格式和编码。")
+        return []
+
+    # 优先使用名为 'code' 的列
+    if 'code' in df.columns:
+        codes = df['code'].dropna().unique().tolist()
+        # **SyntaxError 修复**: 确保字符串 '
+        return [code for code in codes if code.isdigit() and len(code) >= 3] # 增加检查确保是有效的基金代码
+    else:
+        # 如果没有 'code' 列，则使用第一列
+        if len(df.columns) > 0:
+            first_col_name = df.columns[0]
+            codes = df[first_col_name].dropna().astype(str).unique().tolist()
+            # **SyntaxError 修复**: 确保字符串 '
+            return [code for code in codes if code.isdigit() and len(code) >= 3] # 增加检查确保是有效的基金代码
+        else:
+            return []
 
 def load_cache(fund_code):
     """加载缓存，获取已爬取的页面"""
@@ -84,7 +101,6 @@ async def fetch_page(session, url):
     """异步请求单页数据，带重试机制"""
     async with session.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT) as response:
         if response.status == 514:
-            # 514: Frequency Capped
             raise aiohttp.ClientError("Frequency Capped")
         response.raise_for_status()
         return await response.text()
@@ -109,29 +125,19 @@ async def fetch_net_values(fund_code, session, semaphore):
                     await asyncio.sleep(dynamic_delay) 
                 
                 text = await fetch_page(session, url)
-                
-                # --- 关键修复：强化页面解析逻辑 ---
-                total_pages_match = re.search(r'pages:(\d+)', text)
-                total_pages_raw = int(total_pages_match.group(1)) if total_pages_match else 0
-                records_match = re.search(r'records:(\d+)', text)
-                total_records = int(records_match.group(1)) if records_match else '未知'
-
-                if first_run:
-                    total_pages = total_pages_raw
-                    print(f"   基金总页数: {total_pages}，总记录数: {total_records}")
-                    
-                    if total_pages == 0:
-                        print(f"   基金 {fund_code} 未返回任何净值数据，跳过。")
-                        break
-                    
-                    first_run = False
-
                 soup = BeautifulSoup(text, 'lxml')
-                # 天天基金的表格通常位于 id= fund_jjjz
+                
+                if first_run:
+                    total_pages_match = re.search(r'pages:(\d+)', text)
+                    total_pages = int(total_pages_match.group(1)) if total_pages_match else 1
+                    records_match = re.search(r'records:(\d+)', text)
+                    total_records = int(records_match.group(1)) if records_match else '未知'
+                    print(f"   基金总页数: {total_pages}，总记录数: {total_records}")
+                    first_run = False
+                
                 table = soup.find('table') 
 
                 if not table:
-                    print(f"   基金 {fund_code} 第 {page_index} 页未找到数据表格。")
                     break
 
                 rows = table.find_all('tr')[1:] 
@@ -142,7 +148,6 @@ async def fetch_net_values(fund_code, session, semaphore):
                 new_records_count = 0
                 for row in rows:
                     cols = row.find_all('td')
-                    # 检查列数，确保有日期和单位净值
                     if len(cols) >= 2:
                         date_str = cols[0].text.strip()
                         net_value_str = cols[1].text.strip() 
@@ -165,11 +170,9 @@ async def fetch_net_values(fund_code, session, semaphore):
                 print(f"   请求 API 时发生网络错误 (超时/连接) 在第 {page_index} 页: {e}")
                 break
             except Exception as e:
-                # 捕获其他解析错误，例如找不到 total_pages_match
                 print(f"   处理数据时发生意外错误在第 {page_index} 页: {e}")
-                if first_run: # 如果在第一页就出错，很可能是 API 返回了异常内容
-                    break
-                
+                break
+            
         return fund_code, all_records
 
 def save_to_csv(fund_code, data):
@@ -189,11 +192,9 @@ def save_to_csv(fund_code, data):
     
     if os.path.exists(output_path):
         try:
-            # 读取现有数据，确保日期列被解析为日期类型
             existing_df = pd.read_csv(output_path, parse_dates=['date'], dtype={'net_value': float}, encoding='utf-8')
             combined_df = pd.concat([new_df, existing_df])
         except Exception:
-            # 如果现有文件读取失败，则只使用新数据
             combined_df = new_df
     else:
         combined_df = new_df
@@ -222,7 +223,6 @@ def main():
         os.makedirs(OUTPUT_DIR)
         print(f"已创建输出目录: {OUTPUT_DIR}")
 
-    # **按行读取基金代码，以适应 C类.txt 的格式**
     fund_codes = get_all_fund_codes(INPUT_FILE)
     if not fund_codes:
         print("没有可处理的基金代码，脚本结束。")
@@ -230,7 +230,7 @@ def main():
 
     print(f"找到 {len(fund_codes)} 个基金代码，开始获取历史净值...")
     
-    # **已移除超过 100 个基金代码的警告和限制**
+    # **移除原有的超过 100 个基金代码的警告和限制**
     
     results = asyncio.run(fetch_all_funds(fund_codes))
     
@@ -238,12 +238,9 @@ def main():
         # 结果现在可能是 (fund_code, net_values_list) 或 Exception
         if isinstance(result, tuple) and len(result) == 2:
             fund_code, net_values = result
-            if isinstance(net_values, list) and net_values:
+            if isinstance(net_values, list):
                 print("-" * 30)
-                # **按行读取并更新**：save_to_csv 确保了每个基金代码的数据是独立保存/增量更新的
                 save_to_csv(fund_code, net_values)
-            elif isinstance(net_values, list) and not net_values:
-                print(f"--- 基金 {fund_code} 未获取到任何净值数据（API返回的总页数/记录数为零）。")
             else:
                 # 捕获到的是基金代码和非列表数据 (理论上不应发生，但以防万一)
                 print(f"处理基金 {fund_code} 时结果不是列表数据: {net_values}")

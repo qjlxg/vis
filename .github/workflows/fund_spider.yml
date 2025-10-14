@@ -10,6 +10,7 @@ on:
     paths:
       - '.github/workflows/fetch_fund_data.yml'
       - 'fund_spider.py'
+      - 'C类.txt'
 
   # 触发 3: 定时运行（每 3 小时）
   schedule:
