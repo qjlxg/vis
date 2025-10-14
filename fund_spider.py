@@ -25,6 +25,7 @@ HEADERS = {
 REQUEST_TIMEOUT = 30 
 REQUEST_DELAY = 0.5  # 初始延迟，动态调整
 MAX_CONCURRENT = 5  # 最大并发基金数量
+FORCE_UPDATE = False  # 是否强制重新抓取（忽略缓存）
 
 def get_all_fund_codes(file_path):
     """从 C类.txt 文件中读取基金代码（单列无标题，UTF-8 编码）"""
@@ -56,6 +57,9 @@ def get_all_fund_codes(file_path):
 
 def load_cache(fund_code):
     """加载缓存，获取已爬取的页面"""
+    if FORCE_UPDATE:
+        print(f"  -> 强制更新模式，忽略缓存 {fund_code}_cache.json。")
+        return 0
     cache_file = os.path.join(OUTPUT_DIR, f"{fund_code}_cache.json")
     if os.path.exists(cache_file):
         try:
@@ -120,6 +124,9 @@ async def fetch_net_values(fund_code, session, semaphore):
                     records_match = re.search(r'records:(\d+)', text)
                     total_records = int(records_match.group(1)) if records_match else '未知'
                     print(f"   基金总页数: {total_pages}，总记录数: {total_records}")
+                    if page_index > total_pages:
+                        print(f"   缓存页数 ({page_index-1}) >= 总页数 ({total_pages})，跳过抓取。")
+                        return fund_code, f"缓存跳过: 缓存页数 {page_index-1} >= 总页数 {total_pages}"
                     first_run = False
                 
                 table = soup.find('table') 
@@ -256,6 +263,8 @@ def main():
     print(f"总结: 成功处理 {success_count} 个基金，新增 {total_new_records} 条记录，失败 {len(failed_codes)} 个基金。")
     if failed_codes:
         print(f"失败的基金代码: {', '.join(failed_codes)}")
+    if total_new_records == 0:
+        print("警告: 未新增任何记录，可能是缓存跳过或无新数据，请检查 FORCE_UPDATE 设置或 API 响应。")
 
 if __name__ == "__main__":
     main()
