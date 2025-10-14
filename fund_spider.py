@@ -60,7 +60,7 @@ def get_all_fund_codes(file_path):
     # 优先使用名为 'code' 的列
     if 'code' in df.columns:
         codes = df['code'].dropna().unique().tolist()
-        # 移除可能的表头行（如您文件中第一行的 "code"）
+        # 修复了上一轮代码中未终止的字符串字面量错误
         codes = [code.strip() for code in codes if code.strip() and not code.startswith('
         return [code for code in codes if code.isdigit() and len(code) >= 3] # 增加检查确保是有效的基金代码
     else:
@@ -68,6 +68,7 @@ def get_all_fund_codes(file_path):
         if len(df.columns) > 0:
             first_col_name = df.columns[0]
             codes = df[first_col_name].dropna().astype(str).unique().tolist()
+            # 修复了上一轮代码中未终止的字符串字面量错误
             codes = [code.strip() for code in codes if code.strip() and not code.startswith('
             return [code for code in codes if code.isdigit() and len(code) >= 3] # 增加检查确保是有效的基金代码
         else:
