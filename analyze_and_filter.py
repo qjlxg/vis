@@ -8,12 +8,15 @@ def analyze_and_recommend_funds():
     try:
         # 1. 读取所有文件
         selected_indices_df = pd.read_csv('selected_low_valuation_indices.csv', encoding='utf-8')
-        recommended_funds_df = pd.read_csv('recommended_cn_funds.csv', encoding='gb2312')  # 使用检测到的 GB2312 编码
+        recommended_funds_df = pd.read_csv('recommended_cn_funds.csv', encoding='gb2312')  # 使用 GB2312 编码
         with open('comprehensive_fund_analysis.json', 'r', encoding='utf-8') as f:
             comprehensive_analysis_json = json.load(f)
 
-        # 调试：打印列名以确认
+        # 调试：打印列名和前几行数据以确认 CSV 结构
         print("recommended_cn_funds.csv 的列名：", recommended_funds_df.columns.tolist())
+        print("recommended_cn_funds.csv 前五行数据：")
+        print(recommended_funds_df.head().to_string())
+        print(f"recommended_cn_funds.csv 总行数：{len(recommended_funds_df)}")
 
         # 2. 从低估指数列表中提取行业关键词
         low_valuation_indices = selected_indices_df['指数名称'].tolist()
@@ -35,19 +38,23 @@ def analyze_and_recommend_funds():
 
         # 3. 筛选出同时符合低估行业和四四三三法则的基金
         matching_funds = []
+        skipped_rows = []
         for index, row in recommended_funds_df.iterrows():
-            if 'name' not in row or 'code' not in row:
-                print(f"警告：第 {index} 行缺少 'name' 或 'code' 列，跳过此行。")
+            if 'name' not in row or 'code' not in row or pd.isna(row['name']) or pd.isna(row['code']):
+                skipped_rows.append(index)
+                print(f"警告：第 {index} 行缺少 'name' 或 'code' 列或包含空值，跳过此行。行内容：{row.to_dict()}")
                 continue
-            fund_name = row['name']
-            fund_code = row['code']
-            fund_code_str = str(fund_code).zfill(6)
+            fund_name = str(row['name']).strip()
+            fund_code = str(row['code']).zfill(6)
             if any(k in fund_name for k in keywords):
                 matching_funds.append({
-                    'code': fund_code_str,
+                    'code': fund_code,
                     'name': fund_name,
                     '排名信息': row.to_dict()
                 })
+
+        if skipped_rows:
+            print(f"⚠️ 共跳过了 {len(skipped_rows)} 行数据，行号：{skipped_rows}")
 
         if not matching_funds:
             print("❌ 未在推荐基金列表中找到任何与低估行业匹配的基金。")
@@ -73,6 +80,7 @@ def analyze_and_recommend_funds():
         print("JSON 文件中的基金代码：", list(analysis_data_dict.keys()))
 
         final_recommendations = []
+        unmatched_codes = []
         for fund in matching_funds:
             fund_code = fund['code']
             if fund_code in analysis_data_dict:
@@ -97,13 +105,18 @@ def analyze_and_recommend_funds():
                     '基金经理': fund_manager
                 })
             else:
+                unmatched_codes.append(fund_code)
                 print(f"警告：基金代码 {fund_code} 未在 JSON 文件中找到匹配数据。")
+
+        if unmatched_codes:
+            print(f"⚠️ 以下基金代码未在 JSON 文件中找到匹配数据：{unmatched_codes}")
 
         # 6. 输出最终推荐结果
         print("\n--- 最终筛选结果：可供参考和购买的基金 ---")
         if not final_recommendations:
             print("没有找到符合所有条件的基金。")
             print("可能原因：筛选出的基金代码与 JSON 文件中的 fund_code 不匹配。")
+            print("建议：检查 JSON 文件是否包含初步筛选的基金代码，或更新 JSON 文件数据。")
         else:
             for item in final_recommendations:
                 print("\n" + "="*50)
