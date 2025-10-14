@@ -36,41 +36,23 @@ def get_all_fund_codes(file_path):
     
     for encoding in encodings_to_try:
         try:
-            # 尝试按 CSV 格式读取，指定列
-            df = pd.read_csv(file_path, encoding=encoding, dtype={'code': str}, usecols=['code'])
-            print(f"  -> 成功使用 {encoding} 编码和 'code' 列读取文件。")
+            # 尝试按单列文本文件读取（适配 C类.txt 格式）
+            df = pd.read_csv(file_path, encoding=encoding, header=None, dtype=str)
+            df.columns = ['code']  # 直接将第一列命名为 'code'
+            print(f"  -> 成功使用 {encoding} 编码读取文件。")
             break
         except UnicodeDecodeError:
             continue
-        except ValueError:
-            try:
-                # 尝试不指定列名读取，适用于单列文本文件（如您的 C类.txt 格式）
-                df = pd.read_csv(file_path, encoding=encoding, header=None, dtype=str)
-                # 尝试重命名第一列为 'code'
-                df.columns = ['code'] + list(df.columns[1:])
-                print(f"  -> 成功使用 {encoding} 编码读取文件。")
-                break
-            except Exception:
-                continue
+        except Exception:
+            continue
             
     if df is None:
         print("  -> 无法读取文件，请检查文件格式和编码。")
         return []
 
-    # 优先使用名为 'code' 的列
-    if 'code' in df.columns:
-        codes = df['code'].dropna().unique().tolist()
-        # **SyntaxError 修复**: 确保字符串 '
-        return [code for code in codes if code.isdigit() and len(code) >= 3] # 增加检查确保是有效的基金代码
-    else:
-        # 如果没有 'code' 列，则使用第一列
-        if len(df.columns) > 0:
-            first_col_name = df.columns[0]
-            codes = df[first_col_name].dropna().astype(str).unique().tolist()
-            # **SyntaxError 修复**: 确保字符串 '
-            return [code for code in codes if code.isdigit() and len(code) >= 3] # 增加检查确保是有效的基金代码
-        else:
-            return []
+    # 使用名为 'code' 的列
+    codes = df['code'].dropna().astype(str).unique().tolist()
+    return [code for code in codes if code.isdigit() and len(code) >= 3]  # 确保是有效的基金代码
 
 def load_cache(fund_code):
     """加载缓存，获取已爬取的页面"""
@@ -229,8 +211,6 @@ def main():
         return
 
     print(f"找到 {len(fund_codes)} 个基金代码，开始获取历史净值...")
-    
-    # **移除原有的超过 100 个基金代码的警告和限制**
     
     results = asyncio.run(fetch_all_funds(fund_codes))
     
