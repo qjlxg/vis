@@ -1,6 +1,18 @@
 import pandas as pd
 import json
 import os
+import chardet
+
+def detect_file_encoding(file_path):
+    """检测文件的编码"""
+    try:
+        with open(file_path, 'rb') as f:
+            result = chardet.detect(f.read())
+            print(f"检测到文件 {file_path} 的编码：{result['encoding']}（置信度：{result['confidence']})")
+            return result['encoding']
+    except Exception as e:
+        print(f"检测文件编码时发生错误：{e}")
+        return 'gb18030'  # 默认回退到 gb18030
 
 def analyze_and_recommend_funds():
     """
@@ -11,7 +23,16 @@ def analyze_and_recommend_funds():
     try:
         # 1. 读取所有文件
         selected_indices_df = pd.read_csv('selected_low_valuation_indices.csv', encoding='utf-8')
-        recommended_funds_df = pd.read_csv('recommended_cn_funds.csv', encoding='gb18030')  # 改为 utf-8 或根据文件实际编码调整
+        
+        # 检测 recommended_cn_funds.csv 的编码
+        csv_file = 'recommended_cn_funds.csv'
+        encoding = detect_file_encoding(csv_file)
+        try:
+            recommended_funds_df = pd.read_csv(csv_file, encoding=encoding)
+        except UnicodeDecodeError:
+            print(f"使用编码 {encoding} 失败，尝试使用 'gb18030'")
+            recommended_funds_df = pd.read_csv(csv_file, encoding='gb18030')
+        
         with open('comprehensive_fund_analysis.json', 'r', encoding='utf-8') as f:
             comprehensive_analysis_json = json.load(f)
 
@@ -58,9 +79,13 @@ def analyze_and_recommend_funds():
             return
 
         print(f"✅ 找到 {len(matching_funds)} 只同时符合双重标准的基金。")
+        # 调试：打印匹配的基金代码
+        print("初步筛选的基金代码：", [fund['code'] for fund in matching_funds])
 
         # 4. 从综合分析文件中提取详细信息并整合
         analysis_data_dict = {item['fund_code']: item for item in comprehensive_analysis_json}
+        # 调试：打印 JSON 文件中的基金代码
+        print("JSON 文件中的基金代码：", list(analysis_data_dict.keys()))
 
         final_recommendations = []
         for fund in matching_funds:
@@ -95,11 +120,14 @@ def analyze_and_recommend_funds():
                     '最大回撤': max_drawdown_formatted,
                     '基金经理': fund_manager
                 })
+            else:
+                print(f"警告：基金代码 {fund_code} 未在 JSON 文件中找到匹配数据。")
 
         # 5. 打印最终结果
         print("\n--- 最终筛选结果：可供参考和购买的基金 ---")
         if not final_recommendations:
             print("没有找到符合所有条件的基金。")
+            print("可能原因：筛选出的基金代码与 JSON 文件中的 fund_code 不匹配。")
         else:
             for item in final_recommendations:
                 print("\n" + "="*50)
@@ -112,7 +140,6 @@ def analyze_and_recommend_funds():
                 print("前五大持仓：")
                 if item['前五大持仓']:
                     for holding in item['前五大持仓']:
-                        # 确保持仓占比字段存在且可打印
                         proportion_str = f"{holding.get('持仓占比')}%" if holding.get('持仓占比') is not None else 'N/A'
                         print(f"  - {holding.get('股票名称', 'N/A')} (占比: {proportion_str})")
                 else:
