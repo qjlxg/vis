@@ -1,4 +1,4 @@
-name: Financial Data Analyzer
+name: 2-Financial Data Analyzer
 
 on:
   workflow_dispatch:  # 允许手动触发
