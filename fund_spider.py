@@ -12,10 +12,8 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 import json
 
 # 定义文件路径和目录
-# **输入文件：根目录下 C类.txt**
 INPUT_FILE = 'C类.txt'
 OUTPUT_DIR = 'fund_data'
-# 使用天天基金 API 接口，每页 20 条
 BASE_URL = "http://fundf10.eastmoney.com/F10DataApi.aspx?type=lsjz&code={fund_code}&page={page_index}&per=20"
 
 # 设置请求头
@@ -29,30 +27,32 @@ REQUEST_DELAY = 0.5  # 初始延迟，动态调整
 MAX_CONCURRENT = 5  # 最大并发基金数量
 
 def get_all_fund_codes(file_path):
-    """【加速读取】从文件（可能是 CSV 或 TXT）中读取基金代码，并尝试不同编码"""
-    print(f"尝试读取基金代码文件 (仅读取 'code' 列或第一列): {file_path}")
+    """从 C类.txt 文件中读取基金代码（单列无标题，UTF-8 编码）"""
+    print(f"尝试读取基金代码文件: {file_path}")
     encodings_to_try = ['utf-8', 'utf-8-sig', 'gbk', 'latin-1']
     df = None
     
     for encoding in encodings_to_try:
         try:
-            # 尝试按单列文本文件读取（适配 C类.txt 格式）
             df = pd.read_csv(file_path, encoding=encoding, header=None, dtype=str)
             df.columns = ['code']  # 直接将第一列命名为 'code'
-            print(f"  -> 成功使用 {encoding} 编码读取文件。")
+            print(f"  -> 成功使用 {encoding} 编码读取文件，找到 {len(df)} 个基金代码。")
             break
-        except UnicodeDecodeError:
+        except UnicodeDecodeError as e:
+            print(f"  -> 使用 {encoding} 编码读取失败: {e}")
             continue
-        except Exception:
+        except Exception as e:
+            print(f"  -> 读取文件时发生错误: {e}")
             continue
             
     if df is None:
         print("  -> 无法读取文件，请检查文件格式和编码。")
         return []
 
-    # 使用名为 'code' 的列
     codes = df['code'].dropna().astype(str).unique().tolist()
-    return [code for code in codes if code.isdigit() and len(code) >= 3]  # 确保是有效的基金代码
+    valid_codes = [code for code in codes if code.isdigit() and len(code) >= 3]
+    print(f"  -> 找到 {len(valid_codes)} 个有效基金代码。")
+    return valid_codes
 
 def load_cache(fund_code):
     """加载缓存，获取已爬取的页面"""
@@ -61,7 +61,8 @@ def load_cache(fund_code):
         try:
             with open(cache_file, 'r') as f:
                 return json.load(f).get('last_page', 0)
-        except Exception:
+        except Exception as e:
+            print(f"  -> 加载缓存 {cache_file} 失败: {e}")
             return 0
     return 0
 
@@ -71,8 +72,8 @@ def save_cache(fund_code, last_page):
     try:
         with open(cache_file, 'w') as f:
             json.dump({'last_page': last_page}, f)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"  -> 保存缓存 {cache_file} 失败: {e}")
 
 @retry(
     stop=stop_after_attempt(3),
@@ -118,13 +119,13 @@ async def fetch_net_values(fund_code, session, semaphore):
                     first_run = False
                 
                 table = soup.find('table') 
-
                 if not table:
+                    print(f"   第 {page_index} 页未找到表格数据，可能是基金代码无效或无数据。")
                     break
 
                 rows = table.find_all('tr')[1:] 
-
                 if not rows:
+                    print(f"   第 {page_index} 页无数据行，停止抓取。")
                     break
 
                 new_records_count = 0
@@ -137,6 +138,8 @@ async def fetch_net_values(fund_code, session, semaphore):
                         if date_str and net_value_str and net_value_str != '-':
                             all_records.append({'date': date_str, 'net_value': net_value_str})
                             new_records_count += 1
+                        else:
+                            print(f"   第 {page_index} 页数据无效: 日期={date_str}, 净值={net_value_str}")
 
                 print(f"   已获取第 {page_index}/{total_pages} 页，新增 {new_records_count} 条记录，总数: {len(all_records)}")
                 
@@ -150,33 +153,39 @@ async def fetch_net_values(fund_code, session, semaphore):
                     print(f"   频率限制，调整延迟为 {dynamic_delay} 秒，重试第 {page_index} 页")
                     continue
                 print(f"   请求 API 时发生网络错误 (超时/连接) 在第 {page_index} 页: {e}")
-                break
+                return fund_code, f"网络错误: {e}"
             except Exception as e:
                 print(f"   处理数据时发生意外错误在第 {page_index} 页: {e}")
-                break
+                return fund_code, f"数据处理错误: {e}"
             
         return fund_code, all_records
 
 def save_to_csv(fund_code, data):
     """将历史净值数据以增量更新方式保存为 CSV 文件，格式为 date,net_value"""
     output_path = os.path.join(OUTPUT_DIR, f"{fund_code}.csv")
-    new_df = pd.DataFrame(data)
+    if not isinstance(data, list):
+        print(f"   基金 {fund_code} 数据无效: {data}")
+        return False
 
+    new_df = pd.DataFrame(data)
     if new_df.empty:
-        return
+        print(f"   基金 {fund_code} 无新数据可保存。")
+        return False
 
     try:
         new_df['net_value'] = pd.to_numeric(new_df['net_value'], errors='coerce').round(4)
         new_df['date'] = pd.to_datetime(new_df['date'], errors='coerce')
         new_df.dropna(subset=['date', 'net_value'], inplace=True)
-    except Exception:
-        return
+    except Exception as e:
+        print(f"   基金 {fund_code} 数据转换失败: {e}")
+        return False
     
     if os.path.exists(output_path):
         try:
             existing_df = pd.read_csv(output_path, parse_dates=['date'], dtype={'net_value': float}, encoding='utf-8')
             combined_df = pd.concat([new_df, existing_df])
-        except Exception:
+        except Exception as e:
+            print(f"   读取现有 CSV 文件 {output_path} 失败: {e}")
             combined_df = new_df
     else:
         combined_df = new_df
@@ -188,15 +197,16 @@ def save_to_csv(fund_code, data):
     try:
         final_df.to_csv(output_path, index=False, encoding='utf-8')
         print(f"   成功增量保存数据到 {output_path}，总记录数: {len(final_df)}。")
-    except Exception:
-        pass
+        return True
+    except Exception as e:
+        print(f"   保存 CSV 文件 {output_path} 失败: {e}")
+        return False
 
 async def fetch_all_funds(fund_codes):
     """异步获取所有基金数据，控制并发"""
     semaphore = asyncio.Semaphore(MAX_CONCURRENT)
     async with ClientSession() as session:
         tasks = [fetch_net_values(fund_code, session, semaphore) for fund_code in fund_codes]
-        # 使用 return_exceptions=True 来收集所有结果，包括异常
         return await asyncio.gather(*tasks, return_exceptions=True)
 
 def main():
@@ -214,21 +224,26 @@ def main():
     
     results = asyncio.run(fetch_all_funds(fund_codes))
     
+    success_count = 0
+    failed_codes = []
     for result in results:
-        # 结果现在可能是 (fund_code, net_values_list) 或 Exception
+        print("-" * 30)
         if isinstance(result, tuple) and len(result) == 2:
             fund_code, net_values = result
             if isinstance(net_values, list):
-                print("-" * 30)
-                save_to_csv(fund_code, net_values)
+                if save_to_csv(fund_code, net_values):
+                    success_count += 1
             else:
-                # 捕获到的是基金代码和非列表数据 (理论上不应发生，但以防万一)
-                print(f"处理基金 {fund_code} 时结果不是列表数据: {net_values}")
+                print(f"处理基金 {fund_code} 时结果无效: {net_values}")
+                failed_codes.append(fund_code)
         elif isinstance(result, Exception):
-            # 捕获到的是异常
             print(f"处理基金数据时发生顶级异步错误: {result}")
-        
-    print("\n本次基金的历史净值数据获取和保存完成。")
+            failed_codes.append("未知基金代码")
+    
+    print(f"\n本次基金历史净值数据获取和保存完成。")
+    print(f"总结: 成功处理 {success_count} 个基金，失败 {len(failed_codes)} 个基金。")
+    if failed_codes:
+        print(f"失败的基金代码: {', '.join(failed_codes)}")
 
 if __name__ == "__main__":
     main()
