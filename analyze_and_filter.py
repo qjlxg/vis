@@ -11,7 +11,7 @@ def analyze_and_recommend_funds():
     try:
         # 1. 读取所有文件 - 解决方案：为中文 CSV 文件显式指定 encoding='utf-8'
         selected_indices_df = pd.read_csv('selected_low_valuation_indices.csv', encoding='utf-8')
-        recommended_funds_df = pd.read_csv('recommended_cn_funds.csv', encoding='utf-8')
+        recommended_funds_df = pd.read_csv('recommended_cn_funds.csv', encoding='gb18030')
         with open('comprehensive_fund_analysis.json', 'r', encoding='utf-8') as f:
             comprehensive_analysis_json = json.load(f)
 
