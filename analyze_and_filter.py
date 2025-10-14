@@ -9,11 +9,14 @@ def analyze_and_recommend_funds():
     print("--- 正在加载并分析文件，为您筛选最终结果 ---")
 
     try:
-        # 1. 读取所有文件 - 解决方案：为中文 CSV 文件显式指定 encoding='utf-8'
+        # 1. 读取所有文件
         selected_indices_df = pd.read_csv('selected_low_valuation_indices.csv', encoding='utf-8')
-        recommended_funds_df = pd.read_csv('recommended_cn_funds.csv', encoding='gb18030')
+        recommended_funds_df = pd.read_csv('recommended_cn_funds.csv', encoding='utf-8')  # 改为 utf-8 或根据文件实际编码调整
         with open('comprehensive_fund_analysis.json', 'r', encoding='utf-8') as f:
             comprehensive_analysis_json = json.load(f)
+
+        # 调试：打印列名以确认
+        print("recommended_cn_funds.csv 的列名：", recommended_funds_df.columns.tolist())
 
         # 2. 从低估指数列表中提取行业关键词
         low_valuation_indices = selected_indices_df['指数名称'].tolist()
@@ -36,14 +39,17 @@ def analyze_and_recommend_funds():
         # 3. 筛选出同时符合低估行业和四四三三法则的基金
         matching_funds = []
         for index, row in recommended_funds_df.iterrows():
-            fund_name = row['名称']
-            fund_code = row['代码']
+            if 'name' not in row or 'code' not in row:
+                print(f"警告：第 {index} 行缺少 'name' 或 'code' 列，跳过此行。")
+                continue
+            fund_name = row['name']
+            fund_code = row['code']
             # 将基金代码格式化为6位数
             fund_code_str = str(fund_code).zfill(6)
             if any(k in fund_name for k in keywords):
                 matching_funds.append({
-                    '代码': fund_code_str,
-                    '名称': fund_name,
+                    'code': fund_code_str,
+                    'name': fund_name,
                     '排名信息': row.to_dict()
                 })
 
@@ -58,7 +64,7 @@ def analyze_and_recommend_funds():
 
         final_recommendations = []
         for fund in matching_funds:
-            fund_code = fund['代码']
+            fund_code = fund['code']
             if fund_code in analysis_data_dict:
                 details = analysis_data_dict[fund_code]
 
@@ -82,8 +88,8 @@ def analyze_and_recommend_funds():
 
                 final_recommendations.append({
                     '基金代码': fund_code,
-                    '基金名称': fund['名称'],
-                    '匹配行业': ', '.join([k for k in keywords if k in fund['名称']]),
+                    '基金名称': fund['name'],
+                    '匹配行业': ', '.join([k for k in keywords if k in fund['name']]),
                     '前五大持仓': top_holdings,
                     '年化夏普比率': sharpe_ratio_formatted,
                     '最大回撤': max_drawdown_formatted,
