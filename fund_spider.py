@@ -12,7 +12,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 import json
 
 # 定义文件路径和目录
-# **修改：将输入文件改为 C类.txt**
+# **输入文件：根目录下 C类.txt**
 INPUT_FILE = 'C类.txt'
 OUTPUT_DIR = 'fund_data'
 # 使用天天基金 API 接口，每页 20 条
@@ -60,16 +60,14 @@ def get_all_fund_codes(file_path):
     # 优先使用名为 'code' 的列
     if 'code' in df.columns:
         codes = df['code'].dropna().unique().tolist()
-        # 修复了上一轮代码中未终止的字符串字面量错误
-        codes = [code.strip() for code in codes if code.strip() and not code.startswith('
+        # **SyntaxError 修复**: 确保字符串 '
         return [code for code in codes if code.isdigit() and len(code) >= 3] # 增加检查确保是有效的基金代码
     else:
         # 如果没有 'code' 列，则使用第一列
         if len(df.columns) > 0:
             first_col_name = df.columns[0]
             codes = df[first_col_name].dropna().astype(str).unique().tolist()
-            # 修复了上一轮代码中未终止的字符串字面量错误
-            codes = [code.strip() for code in codes if code.strip() and not code.startswith('
+            # **SyntaxError 修复**: 确保字符串 '
             return [code for code in codes if code.isdigit() and len(code) >= 3] # 增加检查确保是有效的基金代码
         else:
             return []
@@ -230,12 +228,9 @@ def main():
         print("没有可处理的基金代码，脚本结束。")
         return
 
-    # **保持原有警告逻辑**
-    if len(fund_codes) > 100:
-        print(f"警告：检测到 {len(fund_codes)} 个基金代码，为避免 GitHub Actions 超时，本次运行将限制为前 100 个基金。")
-        fund_codes = fund_codes[:100]
-
     print(f"找到 {len(fund_codes)} 个基金代码，开始获取历史净值...")
+    
+    # **移除原有的超过 100 个基金代码的警告和限制**
     
     results = asyncio.run(fetch_all_funds(fund_codes))
     
