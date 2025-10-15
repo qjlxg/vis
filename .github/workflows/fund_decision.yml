@@ -30,7 +30,7 @@ jobs:
 
       - name: Run sell decision script
         run: |
-          python market_monitor.py || echo "Script failed, check logs for details" >&2
+          python sell_decision.py || echo "Script failed, check logs for details" >&2
         continue-on-error: true  # 优化：脚本失败不中止，记录错误
 
       - name: Rename report with timestamp
