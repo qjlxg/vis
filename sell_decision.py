@@ -486,3 +486,9 @@ md_content += f"""
         "005118": 1.6000  // T日盘中最新预估净值
     }}
 }}
+"""
+
+with open('sell_decision_optimized_v3.0.md', 'w', encoding='utf-8') as f:
+f.write(md_content)
+
+print("报告已生成: sell_decision_optimized_v3.0.md")
