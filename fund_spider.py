@@ -24,8 +24,11 @@ HEADERS = {
 
 REQUEST_TIMEOUT = 30 
 REQUEST_DELAY = 0.5  # 初始延迟，动态调整
-MAX_CONCURRENT = 10  # 最大并发基金数量
+MAX_CONCURRENT = 5  # 最大并发基金数量
 FORCE_UPDATE = False  # 是否强制重新抓取（忽略缓存）
+
+# === 新增配置：限制每次运行处理的基金数量 ===
+MAX_FUNDS_PER_RUN = 100  # 每次运行脚本最多处理的基金代码数量 (0 表示不限制)
 
 def get_all_fund_codes(file_path):
     """从 C类.txt 文件中读取基金代码（单列无标题，UTF-8 编码）"""
@@ -234,9 +237,19 @@ def main():
         print("没有可处理的基金代码，脚本结束。")
         return
 
-    print(f"找到 {len(fund_codes)} 个基金代码，开始获取历史净值...")
+    # **新增的核心逻辑：限制本次运行处理的基金数量**
+    if MAX_FUNDS_PER_RUN > 0 and len(fund_codes) > MAX_FUNDS_PER_RUN:
+        print(f"限制本次运行最多处理 {MAX_FUNDS_PER_RUN} 个基金。")
+        # 只取列表的前 MAX_FUNDS_PER_RUN 个基金代码
+        processed_codes = fund_codes[:MAX_FUNDS_PER_RUN]
+        print(f"本次实际处理的基金数量: {len(processed_codes)}")
+    else:
+        processed_codes = fund_codes
+        print(f"本次处理所有 {len(processed_codes)} 个基金。")
+
+    print(f"找到 {len(processed_codes)} 个基金代码，开始获取历史净值...")
     
-    results = asyncio.run(fetch_all_funds(fund_codes))
+    results = asyncio.run(fetch_all_funds(processed_codes))
     
     success_count = 0
     total_new_records = 0
