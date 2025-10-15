@@ -24,7 +24,7 @@ HEADERS = {
 
 REQUEST_TIMEOUT = 30 
 REQUEST_DELAY = 0.5  # 初始延迟，动态调整
-MAX_CONCURRENT = 5  # 最大并发基金数量
+MAX_CONCURRENT = 10  # 最大并发基金数量
 FORCE_UPDATE = False  # 是否强制重新抓取（忽略缓存）
 
 def get_all_fund_codes(file_path):
