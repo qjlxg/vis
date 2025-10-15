@@ -10,6 +10,7 @@ import re
 from datetime import datetime
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_message
 import json
+import concurrent.futures # 引入 concurrent.futures
 
 # 定义文件路径和目录
 INPUT_FILE = 'C类.txt'
@@ -24,10 +25,10 @@ HEADERS = {
 
 REQUEST_TIMEOUT = 30 
 REQUEST_DELAY = 0.5  # 初始延迟，动态调整
-MAX_CONCURRENT = 5  # 最大并发基金数量
+MAX_CONCURRENT = 10  # 最大并发基金数量
 FORCE_UPDATE = False  # 是否强制重新抓取（忽略缓存）
 
-# === 新增配置：限制每次运行处理的基金数量 ===
+# 保持上次新增的限制逻辑，以便在 GitHub Actions 中控制批次
 MAX_FUNDS_PER_RUN = 100  # 每次运行脚本最多处理的基金代码数量 (0 表示不限制)
 
 def get_all_fund_codes(file_path):
@@ -69,7 +70,7 @@ def load_cache(fund_code):
             with open(cache_file, 'r') as f:
                 cache = json.load(f)
                 last_page = cache.get('last_page', 0)
-                print(f"  -> 加载缓存 {cache_file}，上次抓取到第 {last_page} 页。")
+                # 移除此处过多的日志打印
                 return last_page
         except Exception as e:
             print(f"  -> 加载缓存 {cache_file} 失败: {e}")
@@ -82,7 +83,7 @@ def save_cache(fund_code, last_page):
     try:
         with open(cache_file, 'w') as f:
             json.dump({'last_page': last_page}, f)
-        print(f"  -> 成功保存缓存到 {cache_file}，记录页数: {last_page}。")
+        # 移除此处过多的日志打印
     except Exception as e:
         print(f"  -> 保存缓存 {cache_file} 失败: {e}")
 
@@ -101,7 +102,8 @@ async def fetch_page(session, url):
 
 async def fetch_net_values(fund_code, session, semaphore):
     """使用天天基金 API 获取指定基金代码的【所有】历史净值数据 (分页，异步)"""
-    print(f"-> 正在使用天天基金 API 获取基金代码 {fund_code} 的所有历史净值...")
+    # 仅在开始时打印
+    print(f"-> [START] 基金代码 {fund_code}")
     
     async with semaphore:  # 控制并发
         all_records = []
@@ -126,20 +128,20 @@ async def fetch_net_values(fund_code, session, semaphore):
                     total_pages = int(total_pages_match.group(1)) if total_pages_match else 1
                     records_match = re.search(r'records:(\d+)', text)
                     total_records = int(records_match.group(1)) if records_match else '未知'
-                    print(f"   基金总页数: {total_pages}，总记录数: {total_records}")
+                    print(f"   基金 {fund_code} 信息：总页数 {total_pages}，总记录数 {total_records}。")
                     if page_index > total_pages:
-                        print(f"   缓存页数 ({page_index-1}) >= 总页数 ({total_pages})，跳过抓取。")
+                        print(f"   基金 {fund_code} [跳过]：缓存页数 ({page_index-1}) >= 总页数 ({total_pages})。")
                         return fund_code, f"缓存跳过: 缓存页数 {page_index-1} >= 总页数 {total_pages}"
                     first_run = False
                 
                 table = soup.find('table') 
                 if not table:
-                    print(f"   第 {page_index} 页未找到表格数据，基金代码 {fund_code} 可能无效或无数据。")
+                    print(f"   基金 {fund_code} 第 {page_index} 页未找到表格数据，可能无效或无数据。")
                     return fund_code, f"无表格数据: 基金代码可能无效"
 
                 rows = table.find_all('tr')[1:] 
                 if not rows:
-                    print(f"   第 {page_index} 页无数据行，停止抓取。")
+                    print(f"   基金 {fund_code} 第 {page_index} 页无数据行，停止抓取。")
                     break
 
                 new_records_count = 0
@@ -152,11 +154,10 @@ async def fetch_net_values(fund_code, session, semaphore):
                         if date_str and net_value_str and net_value_str != '-':
                             all_records.append({'date': date_str, 'net_value': net_value_str})
                             new_records_count += 1
-                        else:
-                            print(f"   第 {page_index} 页数据无效: 日期={date_str}, 净值={net_value_str}")
-
-                print(f"   已获取第 {page_index}/{total_pages} 页，新增 {new_records_count} 条记录，总数: {len(all_records)}")
+                        # else:
+                        #     print(f"   基金 {fund_code} 第 {page_index} 页数据无效: 日期={date_str}, 净值={net_value_str}") # 移除此行，减少日志
                 
+                # 移除此处过多的日志打印，只通过缓存更新来追踪进度
                 save_cache(fund_code, page_index)  # 保存缓存
                 page_index += 1
                 dynamic_delay = max(REQUEST_DELAY, dynamic_delay * 0.9)  # 动态减少延迟
@@ -164,14 +165,15 @@ async def fetch_net_values(fund_code, session, semaphore):
             except aiohttp.ClientError as e:
                 if "Frequency Capped" in str(e):
                     dynamic_delay = min(dynamic_delay * 2, 5.0)  # 频率限制时增加延迟
-                    print(f"   频率限制，调整延迟为 {dynamic_delay} 秒，重试第 {page_index} 页")
+                    print(f"   基金 {fund_code} [警告]：频率限制，延迟调整为 {dynamic_delay} 秒，重试第 {page_index} 页")
                     continue
-                print(f"   请求 API 时发生网络错误 (超时/连接) 在第 {page_index} 页: {e}")
+                print(f"   基金 {fund_code} [错误]：请求 API 时发生网络错误 (超时/连接) 在第 {page_index} 页: {e}")
                 return fund_code, f"网络错误: {e}"
             except Exception as e:
-                print(f"   处理数据时发生意外错误在第 {page_index} 页: {e}")
+                print(f"   基金 {fund_code} [错误]：处理数据时发生意外错误在第 {page_index} 页: {e}")
                 return fund_code, f"数据处理错误: {e}"
             
+        print(f"-> [COMPLETE] 基金 {fund_code} 数据抓取完毕，共获取 {len(all_records)} 条记录。")
         return fund_code, all_records
 
 def save_to_csv(fund_code, data):
@@ -213,18 +215,74 @@ def save_to_csv(fund_code, data):
     try:
         final_df.to_csv(output_path, index=False, encoding='utf-8')
         new_record_count = len(final_df)
-        print(f"   成功增量保存数据到 {output_path}，总记录数: {new_record_count}（新增 {new_record_count - old_record_count} 条）。")
+        # 精简保存成功的日志
+        print(f"   -> 基金 {fund_code} [保存完成]：总记录数 {new_record_count} (新增 {new_record_count - old_record_count} 条)。")
         return True, new_record_count - old_record_count
     except Exception as e:
-        print(f"   保存 CSV 文件 {output_path} 失败: {e}")
+        print(f"   基金 {fund_code} 保存 CSV 文件 {output_path} 失败: {e}")
         return False, 0
 
 async def fetch_all_funds(fund_codes):
-    """异步获取所有基金数据，控制并发"""
+    """异步获取所有基金数据，并在任务完成时立即保存数据（实现边下载边保存）"""
     semaphore = asyncio.Semaphore(MAX_CONCURRENT)
     async with ClientSession() as session:
-        tasks = [fetch_net_values(fund_code, session, semaphore) for fund_code in fund_codes]
-        return await asyncio.gather(*tasks, return_exceptions=True)
+        # 1. 创建所有异步抓取任务
+        fetch_tasks = [fetch_net_values(fund_code, session, semaphore) for fund_code in fund_codes]
+        
+        # 2. 获取当前事件循环，用于运行同步的 save_to_csv (必须在单独的线程中运行)
+        loop = asyncio.get_event_loop()
+        
+        success_count = 0
+        total_new_records = 0
+        failed_codes = []
+        
+        # 3. 使用 as_completed 迭代已完成的任务，立即处理结果并保存
+        for future in asyncio.as_completed(fetch_tasks):
+            print("-" * 30) # 保持分割线，用于区分不同基金的处理结果
+            try:
+                # 等待任务完成并获取结果
+                result = await future 
+            except Exception as e:
+                # 捕获在 fetch_net_values 之外发生的顶级异常（例如任务取消）
+                print(f"处理基金数据时发生顶级异步错误: {e}")
+                failed_codes.append("未知基金代码")
+                continue # 继续处理下一个已完成的任务
+
+            # 结果处理 (与原 main() 逻辑类似)
+            if isinstance(result, tuple) and len(result) == 2:
+                fund_code, net_values = result
+                
+                if isinstance(net_values, list):
+                    # 在单独的线程中运行同步的 save_to_csv，避免阻塞事件循环
+                    try:
+                        success, new_records = await loop.run_in_executor(
+                            None, 
+                            save_to_csv, 
+                            fund_code, 
+                            net_values
+                        )
+                        
+                        if success:
+                            success_count += 1
+                            total_new_records += new_records
+                        else:
+                            failed_codes.append(fund_code)
+                    except concurrent.futures.CancelledError:
+                        print(f"基金 {fund_code} 的保存任务被取消。")
+                        failed_codes.append(fund_code)
+                    except Exception as e:
+                        print(f"基金 {fund_code} 的保存任务在线程中发生错误: {e}")
+                        failed_codes.append(fund_code)
+                        
+                else:
+                    # 打印抓取失败信息
+                    print(f"   基金 {fund_code} [抓取失败/跳过]：{net_values}")
+                    # 只有抓取失败才计入 failed_codes，缓存跳过不计入
+                    if not str(net_values).startswith('缓存跳过'):
+                        failed_codes.append(fund_code)
+            
+        # 4. 返回最终统计结果
+        return success_count, total_new_records, failed_codes
 
 def main():
     """主函数"""
@@ -237,7 +295,7 @@ def main():
         print("没有可处理的基金代码，脚本结束。")
         return
 
-    # **新增的核心逻辑：限制本次运行处理的基金数量**
+    # 限制本次运行处理的基金数量
     if MAX_FUNDS_PER_RUN > 0 and len(fund_codes) > MAX_FUNDS_PER_RUN:
         print(f"限制本次运行最多处理 {MAX_FUNDS_PER_RUN} 个基金。")
         # 只取列表的前 MAX_FUNDS_PER_RUN 个基金代码
@@ -249,35 +307,19 @@ def main():
 
     print(f"找到 {len(processed_codes)} 个基金代码，开始获取历史净值...")
     
-    results = asyncio.run(fetch_all_funds(processed_codes))
+    # 异步运行 fetch_all_funds，它现在包含了结果处理和保存逻辑
+    success_count, total_new_records, failed_codes = asyncio.run(fetch_all_funds(processed_codes))
     
-    success_count = 0
-    total_new_records = 0
-    failed_codes = []
-    for result in results:
-        print("-" * 30)
-        if isinstance(result, tuple) and len(result) == 2:
-            fund_code, net_values = result
-            if isinstance(net_values, list):
-                success, new_records = save_to_csv(fund_code, net_values)
-                if success:
-                    success_count += 1
-                    total_new_records += new_records
-                else:
-                    failed_codes.append(fund_code)
-            else:
-                print(f"处理基金 {fund_code} 时结果无效: {net_values}")
-                failed_codes.append(fund_code)
-        elif isinstance(result, Exception):
-            print(f"处理基金数据时发生顶级异步错误: {result}")
-            failed_codes.append("未知基金代码")
-    
-    print(f"\n本次基金历史净值数据获取和保存完成。")
+    # 打印总结
+    print(f"\n======== 本次更新总结 ========")
+    print(f"本次基金历史净值数据获取和保存完成。")
     print(f"总结: 成功处理 {success_count} 个基金，新增 {total_new_records} 条记录，失败 {len(failed_codes)} 个基金。")
     if failed_codes:
         print(f"失败的基金代码: {', '.join(failed_codes)}")
     if total_new_records == 0:
         print("警告: 未新增任何记录，可能是缓存跳过或无新数据，请检查 FORCE_UPDATE 设置或 API 响应。")
+    print(f"==============================")
+
 
 if __name__ == "__main__":
     main()
