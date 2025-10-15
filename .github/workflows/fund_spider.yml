@@ -4,7 +4,7 @@ name: 净值更新 Fetch Fund Net Value Data
 on:
   # 触发 1: 手动触发，允许在 GitHub Actions 页面点击“Run workflow”运行
   workflow_dispatch:
-  
+   
   # 触发 2: 文件变更时自动运行
   push:
     paths:
@@ -14,7 +14,7 @@ on:
 
   # 触发 3: 定时运行（每 3 小时）
   schedule:
-       - cron: 0 */3 * * *
+      - cron: 0 */3 * * * # 每天运行 8 次
 
 jobs:
   update-data:
@@ -45,20 +45,24 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          # 确保所有依赖（包括 lxml 和 tenacity）都安装
           pip install pandas requests beautifulsoup4 aiohttp lxml tenacity
 
       # 步骤 5: 执行 Python 爬虫脚本
+      # *** 关键修改: 添加 continue-on-error: true ***
+      # 即使脚本崩溃，工作流也会继续到提交步骤，确保已抓取的数据（CSV/JSON）不会丢失。
       - name: Run fund spider script
-        env:
-          # 如果脚本需要 API 密钥，可通过 GitHub Secrets 配置
-          API_KEY: ${{ secrets.FUND_API_KEY }}
         run: |
-          python fund_spider.py || { echo "Script failed, check logs for details"; exit 1; }
+          python fund_spider.py
+        # 允许此步骤失败，但工作流继续执行
+        continue-on-error: true 
 
       # 步骤 6: 检查是否有新的或更新的数据文件并提交
+      # 提交的数据包括 CSV (实际数据) 和 JSON (缓存进度)
       - name: Commit and Push new data
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           file_pattern: 'fund_data/*.csv fund_data/*.json'
           commit_message: "🤖 chore: Update fund net value data at ${{ github.event.schedule || github.event.head_commit.timestamp || 'manual run' }}"
+          # 即使上一步失败（即 continue-on-error），也尝试提交
           skip_dirty_check: false
