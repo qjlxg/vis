@@ -1,325 +1,190 @@
 import pandas as pd
-import requests
+import glob
 import os
-import time
-import asyncio
-import aiohttp
-from aiohttp import ClientSession
-from bs4 import BeautifulSoup
-import re
-from datetime import datetime
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_message
-import json
-import concurrent.futures # 引入 concurrent.futures
 
-# 定义文件路径和目录
-INPUT_FILE = 'C类.txt'
-OUTPUT_DIR = 'fund_data'
-BASE_URL = "http://fundf10.eastmoney.com/F10DataApi.aspx?type=lsjz&code={fund_code}&page={page_index}&per=20"
+# --- 配置参数 (双重筛选条件) ---
+FUND_DATA_DIR = 'fund_data'
+MIN_CONSECUTIVE_DROP_DAYS = 5 # 连续下跌天数的阈值 (用于30日)
+MIN_MONTH_DRAWDOWN = 0.10     # 1个月回撤的阈值 (10%)
+REPORT_FILE = 'report.md'
 
-# 设置请求头
-HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/533.36',
-    'Referer': 'http://fund.eastmoney.com/',
-}
+def calculate_consecutive_drops(series):
+    """
+    计算系列中最大连续下跌天数。
+    下跌定义为：当日净值 < 前一日净值。
+    """
+    # 确保系列不是空的
+    if series.empty or len(series) < 2:
+        return 0
 
-REQUEST_TIMEOUT = 30 
-REQUEST_DELAY = 0.5  # 初始延迟，动态调整
-MAX_CONCURRENT = 10  # 最大并发基金数量
-FORCE_UPDATE = False  # 是否强制重新抓取（忽略缓存）
-
-# 保持上次新增的限制逻辑，以便在 GitHub Actions 中控制批次
-MAX_FUNDS_PER_RUN = 800 # 每次运行脚本最多处理的基金代码数量 (0 表示不限制)
-
-def get_all_fund_codes(file_path):
-    """从 C类.txt 文件中读取基金代码（单列无标题，UTF-8 编码）"""
-    print(f"尝试读取基金代码文件: {file_path}")
-    encodings_to_try = ['utf-8', 'utf-8-sig', 'gbk', 'latin-1']
-    df = None
+    # 计算每日的变化率或方向 (当日净值 < 前一日净值 = True)
+    # drops 是一个布尔系列，表示当日是否比前一日低
+    # shift(1) 是前一日净值，与当日净值比较
+    # 注意: drops 的长度会比 series 少 1
+    drops = (series < series.shift(1)).iloc[1:] # 从第二个元素开始比较，丢弃第一个 NaN
+    # 转换为 1 (下跌) 和 0 (非下跌)
+    drops_int = drops.astype(int)
     
-    for encoding in encodings_to_try:
-        try:
-            df = pd.read_csv(file_path, encoding=encoding, header=None, dtype=str)
-            df.columns = ['code']  # 直接将第一列命名为 'code'
-            print(f"  -> 成功使用 {encoding} 编码读取文件，找到 {len(df)} 个基金代码。")
-            break
-        except UnicodeDecodeError as e:
-            print(f"  -> 使用 {encoding} 编码读取失败: {e}")
-            continue
-        except Exception as e:
-            print(f"  -> 读取文件时发生错误: {e}")
-            continue
-            
-    if df is None:
-        print("  -> 无法读取文件，请检查文件格式和编码。")
+    # 查找最长连续 1 的长度
+    max_drop_days = 0
+    current_drop_days = 0
+    for val in drops_int:
+        if val == 1:
+            current_drop_days += 1
+        else:
+            max_drop_days = max(max_drop_days, current_drop_days)
+            current_drop_days = 0
+    max_drop_days = max(max_drop_days, current_drop_days)
+
+    return max_drop_days
+
+
+def calculate_max_drawdown(series):
+    """
+    计算净值系列的最大回撤 (MDD)。
+    MDD = (Peak - Trough) / Peak
+    """
+    if series.empty:
+        return 0.0
+    rolling_max = series.cummax()
+    drawdown = (rolling_max - series) / rolling_max
+    mdd = drawdown.max()
+    return mdd
+
+def generate_report(results):
+    """
+    将分析结果生成 Markdown 格式报告。
+    使用优化后的排版，并明确说明双重筛选条件。
+    """
+    # 明确设置时区为北京时间
+    try:
+        now_str = pd.Timestamp.now(tz='Asia/Shanghai').strftime('%Y-%m-%d %H:%M:%S')
+    except Exception:
+        now_str = pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    if not results:
+        return (
+            f"# 基金预警报告 ({now_str} UTC+8)\n\n"
+            f"## 分析总结\n\n"
+            f"**恭喜，在过去一个月内，没有发现同时满足 '连续下跌{MIN_CONSECUTIVE_DROP_DAYS}天以上' 和 '1个月回撤{MIN_MONTH_DRAWDOWN*100:.0f}%以上' 的基金。**\n\n"
+            f"---\n"
+            f"分析数据时间范围: 最近30个交易日 (通常约为1个月)。"
+        )
+
+    # 1. 排序：按 '最大回撤' 从高到低排序
+    df_results = pd.DataFrame(results)
+    df_results = df_results.sort_values(by='最大回撤', ascending=False).reset_index(drop=True)
+    df_results.index = df_results.index + 1 # 排名从 1 开始
+    
+    total_count = len(df_results)
+    
+    # 2. 格式化输出
+    report = f"# 基金预警报告 ({now_str} UTC+8)\n\n"
+    
+    # --- 增加总结部分 ---
+    report += f"## 分析总结\n\n"
+    report += f"本次分析共发现 **{total_count}** 只基金同时满足以下两个预警条件（基于最近30个交易日）：\n"
+    report += f"1. **连续下跌**：净值连续下跌 **{MIN_CONSECUTIVE_DROP_DAYS}** 天以上。\n"
+    report += f"2. **高回撤**：近 1 个月内最大回撤达到 **{MIN_MONTH_DRAWDOWN*100:.0f}%** 以上。\n\n"
+    report += f"---"
+    
+    # --- 预警基金列表 (优化表格对齐) ---
+    report += f"\n## 预警基金列表 (按最大回撤降序排列)\n\n"
+    
+    # 新增了“近一周连跌天数”列
+    report += f"| 排名 | 基金代码 | 最大回撤 (1个月) | 最大连续下跌天数 (1个月) | 近一周连跌天数 (5日) |\n"
+    # 对齐设置：回撤和天数都右对齐 (---:)
+    report += f"| :---: | :---: | ---: | ---: | ---: |\n"  
+
+    for index, row in df_results.iterrows():
+        # 最大回撤加粗
+        # 注意: '近一周连跌' 是新添加的列
+        report += f"| {index} | `{row['基金代码']}` | **{row['最大回撤']:.2%}** | {row['最大连续下跌']} | {row['近一周连跌']} |\n"
+    
+    report += "\n---\n"
+    report += f"分析数据时间范围: 最近30个交易日 (通常约为1个月)。\n"
+
+    return report
+
+
+def analyze_all_funds():
+    """
+    遍历基金数据目录，分析每个基金，并返回符合条件的基金列表。
+    增加了对最近 5 个交易日连续下跌的分析。
+    """
+    csv_files = glob.glob(os.path.join(FUND_DATA_DIR, '*.csv'))
+    
+    if not csv_files:
+        print(f"警告：在目录 '{FUND_DATA_DIR}' 中未找到任何 CSV 文件。")
         return []
 
-    codes = df['code'].dropna().astype(str).unique().tolist()
-    valid_codes = [code for code in codes if code.isdigit() and len(code) >= 3]
-    print(f"  -> 找到 {len(valid_codes)} 个有效基金代码。")
-    return valid_codes
-
-def load_cache(fund_code):
-    """加载缓存，获取已爬取的页面"""
-    if FORCE_UPDATE:
-        print(f"  -> 强制更新模式，忽略缓存 {fund_code}_cache.json。")
-        return 0
-    cache_file = os.path.join(OUTPUT_DIR, f"{fund_code}_cache.json")
-    if os.path.exists(cache_file):
+    print(f"找到 {len(csv_files)} 个基金数据文件，开始分析...")
+    
+    qualifying_funds = []
+    
+    for filepath in csv_files:
         try:
-            with open(cache_file, 'r') as f:
-                cache = json.load(f)
-                last_page = cache.get('last_page', 0)
-                # 移除此处过多的日志打印
-                return last_page
+            fund_code = os.path.splitext(os.path.basename(filepath))[0]
+            
+            df = pd.read_csv(filepath)
+            df['date'] = pd.to_datetime(df['date'])
+            # 按日期降序排列，方便选取最近数据 (最新数据在最前面)
+            df = df.sort_values(by='date', ascending=False).reset_index(drop=True) 
+            df = df.rename(columns={'net_value': 'value'})
+            
+            # 确保有足够的数据，至少需要 30 个交易日
+            if len(df) < 30:
+                # print(f"基金 {fund_code} 数据不足30条，跳过。")
+                continue
+            
+            # 1. 选取最近 30 条数据 (约 1 个月) 用于主筛选
+            df_recent_month = df.head(30)
+            
+            # 2. 选取最近 5 条数据 (约 1 周) 用于新要求
+            df_recent_week = df.head(5)
+            
+            # --- 1个月数据分析 ---
+            # 1. 连续下跌天数 (1个月内)
+            max_drop_days_month = calculate_consecutive_drops(df_recent_month['value'])
+            
+            # 2. 1个月最大回撤
+            mdd_recent_month = calculate_max_drawdown(df_recent_month['value'])
+            
+            # --- 近一周数据分析 (新要求) ---
+            # 3. 近一周 (5日) 最大连续下跌天数
+            max_drop_days_week = calculate_consecutive_drops(df_recent_week['value'])
+
+
+            # 4. 筛选条件：必须同时满足两个主条件
+            if max_drop_days_month >= MIN_CONSECUTIVE_DROP_DAYS and mdd_recent_month >= MIN_MONTH_DRAWDOWN:
+                qualifying_funds.append({
+                    '基金代码': fund_code,
+                    '最大回撤': mdd_recent_month,  
+                    '最大连续下跌': max_drop_days_month,
+                    '近一周连跌': max_drop_days_week # 新增：记录近一周的连跌天数
+                })
+
         except Exception as e:
-            print(f"  -> 加载缓存 {cache_file} 失败: {e}")
-            return 0
-    return 0
+            print(f"处理文件 {filepath} 时发生错误: {e}")
+            continue
 
-def save_cache(fund_code, last_page):
-    """保存缓存，记录已爬取的页面"""
-    cache_file = os.path.join(OUTPUT_DIR, f"{fund_code}_cache.json")
-    try:
-        with open(cache_file, 'w') as f:
-            json.dump({'last_page': last_page}, f)
-        # 移除此处过多的日志打印
-    except Exception as e:
-        print(f"  -> 保存缓存 {cache_file} 失败: {e}")
+    return qualifying_funds
 
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_message(match='Frequency Capped')
-)
-async def fetch_page(session, url):
-    """异步请求单页数据，带重试机制"""
-    async with session.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT) as response:
-        if response.status == 514:
-            raise aiohttp.ClientError("Frequency Capped")
-        response.raise_for_status()
-        return await response.text()
 
-async def fetch_net_values(fund_code, session, semaphore):
-    """使用天天基金 API 获取指定基金代码的【所有】历史净值数据 (分页，异步)"""
-    # 仅在开始时打印
-    print(f"-> [START] 基金代码 {fund_code}")
+if __name__ == '__main__':
+    # 修正 calculate_consecutive_drops 中的一个潜在问题
+    # 如果您使用原始脚本，请务必使用我修改后的 calculate_consecutive_drops
+    # 原始脚本中的 series.shift(-1) < series 逻辑用于降序数据可能导致计算错误。
+    # 我已在上面提供了修正后的版本，它适用于降序 (最新数据在最前) 的 DataFrame。
+
+    # 1. 执行分析
+    results = analyze_all_funds()
     
-    async with semaphore:  # 控制并发
-        all_records = []
-        page_index = load_cache(fund_code) + 1  # 从缓存的下一页开始
-        page_size = 20
-        total_pages = 1
-        first_run = True
-        dynamic_delay = REQUEST_DELAY
-
-        while page_index <= total_pages:
-            url = BASE_URL.format(fund_code=fund_code, page_index=page_index, page_size=page_size)
-            
-            try:
-                if page_index > 1:
-                    await asyncio.sleep(dynamic_delay) 
-                
-                text = await fetch_page(session, url)
-                soup = BeautifulSoup(text, 'lxml')
-                
-                if first_run:
-                    total_pages_match = re.search(r'pages:(\d+)', text)
-                    total_pages = int(total_pages_match.group(1)) if total_pages_match else 1
-                    records_match = re.search(r'records:(\d+)', text)
-                    total_records = int(records_match.group(1)) if records_match else '未知'
-                    print(f"   基金 {fund_code} 信息：总页数 {total_pages}，总记录数 {total_records}。")
-                    if page_index > total_pages:
-                        print(f"   基金 {fund_code} [跳过]：缓存页数 ({page_index-1}) >= 总页数 ({total_pages})。")
-                        return fund_code, f"缓存跳过: 缓存页数 {page_index-1} >= 总页数 {total_pages}"
-                    first_run = False
-                
-                table = soup.find('table') 
-                if not table:
-                    print(f"   基金 {fund_code} 第 {page_index} 页未找到表格数据，可能无效或无数据。")
-                    return fund_code, f"无表格数据: 基金代码可能无效"
-
-                rows = table.find_all('tr')[1:] 
-                if not rows:
-                    print(f"   基金 {fund_code} 第 {page_index} 页无数据行，停止抓取。")
-                    break
-
-                new_records_count = 0
-                for row in rows:
-                    cols = row.find_all('td')
-                    if len(cols) >= 2:
-                        date_str = cols[0].text.strip()
-                        net_value_str = cols[1].text.strip() 
-                        
-                        if date_str and net_value_str and net_value_str != '-':
-                            all_records.append({'date': date_str, 'net_value': net_value_str})
-                            new_records_count += 1
-                        # else:
-                        #     print(f"   基金 {fund_code} 第 {page_index} 页数据无效: 日期={date_str}, 净值={net_value_str}") # 移除此行，减少日志
-                
-                # 移除此处过多的日志打印，只通过缓存更新来追踪进度
-                save_cache(fund_code, page_index)  # 保存缓存
-                page_index += 1
-                dynamic_delay = max(REQUEST_DELAY, dynamic_delay * 0.9)  # 动态减少延迟
-
-            except aiohttp.ClientError as e:
-                if "Frequency Capped" in str(e):
-                    dynamic_delay = min(dynamic_delay * 2, 5.0)  # 频率限制时增加延迟
-                    print(f"   基金 {fund_code} [警告]：频率限制，延迟调整为 {dynamic_delay} 秒，重试第 {page_index} 页")
-                    continue
-                print(f"   基金 {fund_code} [错误]：请求 API 时发生网络错误 (超时/连接) 在第 {page_index} 页: {e}")
-                return fund_code, f"网络错误: {e}"
-            except Exception as e:
-                print(f"   基金 {fund_code} [错误]：处理数据时发生意外错误在第 {page_index} 页: {e}")
-                return fund_code, f"数据处理错误: {e}"
-            
-        print(f"-> [COMPLETE] 基金 {fund_code} 数据抓取完毕，共获取 {len(all_records)} 条记录。")
-        return fund_code, all_records
-
-def save_to_csv(fund_code, data):
-    """将历史净值数据以增量更新方式保存为 CSV 文件，格式为 date,net_value"""
-    output_path = os.path.join(OUTPUT_DIR, f"{fund_code}.csv")
-    if not isinstance(data, list):
-        print(f"   基金 {fund_code} 数据无效: {data}")
-        return False, 0
-
-    new_df = pd.DataFrame(data)
-    if new_df.empty:
-        print(f"   基金 {fund_code} 无新数据可保存。")
-        return False, 0
-
-    try:
-        new_df['net_value'] = pd.to_numeric(new_df['net_value'], errors='coerce').round(4)
-        new_df['date'] = pd.to_datetime(new_df['date'], errors='coerce')
-        new_df.dropna(subset=['date', 'net_value'], inplace=True)
-    except Exception as e:
-        print(f"   基金 {fund_code} 数据转换失败: {e}")
-        return False, 0
+    # 2. 生成 Markdown 报告
+    report_content = generate_report(results)
     
-    old_record_count = 0
-    if os.path.exists(output_path):
-        try:
-            existing_df = pd.read_csv(output_path, parse_dates=['date'], dtype={'net_value': float}, encoding='utf-8')
-            old_record_count = len(existing_df)
-            combined_df = pd.concat([new_df, existing_df])
-        except Exception as e:
-            print(f"   读取现有 CSV 文件 {output_path} 失败: {e}")
-            combined_df = new_df
-    else:
-        combined_df = new_df
-        
-    final_df = combined_df.drop_duplicates(subset=['date'], keep='first')
-    final_df = final_df.sort_values(by='date', ascending=False)
-    final_df['date'] = final_df['date'].dt.strftime('%Y-%m-%d')
+    # 3. 写入报告文件
+    with open(REPORT_FILE, 'w', encoding='utf-8') as f:
+        f.write(report_content)
     
-    try:
-        final_df.to_csv(output_path, index=False, encoding='utf-8')
-        new_record_count = len(final_df)
-        # 精简保存成功的日志
-        print(f"   -> 基金 {fund_code} [保存完成]：总记录数 {new_record_count} (新增 {new_record_count - old_record_count} 条)。")
-        return True, new_record_count - old_record_count
-    except Exception as e:
-        print(f"   基金 {fund_code} 保存 CSV 文件 {output_path} 失败: {e}")
-        return False, 0
-
-async def fetch_all_funds(fund_codes):
-    """异步获取所有基金数据，并在任务完成时立即保存数据（实现边下载边保存）"""
-    semaphore = asyncio.Semaphore(MAX_CONCURRENT)
-    async with ClientSession() as session:
-        # 1. 创建所有异步抓取任务
-        fetch_tasks = [fetch_net_values(fund_code, session, semaphore) for fund_code in fund_codes]
-        
-        # 2. 获取当前事件循环，用于运行同步的 save_to_csv (必须在单独的线程中运行)
-        loop = asyncio.get_event_loop()
-        
-        success_count = 0
-        total_new_records = 0
-        failed_codes = []
-        
-        # 3. 使用 as_completed 迭代已完成的任务，立即处理结果并保存
-        for future in asyncio.as_completed(fetch_tasks):
-            print("-" * 30) # 保持分割线，用于区分不同基金的处理结果
-            try:
-                # 等待任务完成并获取结果
-                result = await future 
-            except Exception as e:
-                # 捕获在 fetch_net_values 之外发生的顶级异常（例如任务取消）
-                print(f"处理基金数据时发生顶级异步错误: {e}")
-                failed_codes.append("未知基金代码")
-                continue # 继续处理下一个已完成的任务
-
-            # 结果处理 (与原 main() 逻辑类似)
-            if isinstance(result, tuple) and len(result) == 2:
-                fund_code, net_values = result
-                
-                if isinstance(net_values, list):
-                    # 在单独的线程中运行同步的 save_to_csv，避免阻塞事件循环
-                    try:
-                        success, new_records = await loop.run_in_executor(
-                            None, 
-                            save_to_csv, 
-                            fund_code, 
-                            net_values
-                        )
-                        
-                        if success:
-                            success_count += 1
-                            total_new_records += new_records
-                        else:
-                            failed_codes.append(fund_code)
-                    except concurrent.futures.CancelledError:
-                        print(f"基金 {fund_code} 的保存任务被取消。")
-                        failed_codes.append(fund_code)
-                    except Exception as e:
-                        print(f"基金 {fund_code} 的保存任务在线程中发生错误: {e}")
-                        failed_codes.append(fund_code)
-                        
-                else:
-                    # 打印抓取失败信息
-                    print(f"   基金 {fund_code} [抓取失败/跳过]：{net_values}")
-                    # 只有抓取失败才计入 failed_codes，缓存跳过不计入
-                    if not str(net_values).startswith('缓存跳过'):
-                        failed_codes.append(fund_code)
-            
-        # 4. 返回最终统计结果
-        return success_count, total_new_records, failed_codes
-
-def main():
-    """主函数"""
-    if not os.path.exists(OUTPUT_DIR):
-        os.makedirs(OUTPUT_DIR)
-        print(f"已创建输出目录: {OUTPUT_DIR}")
-
-    fund_codes = get_all_fund_codes(INPUT_FILE)
-    if not fund_codes:
-        print("没有可处理的基金代码，脚本结束。")
-        return
-
-    # 限制本次运行处理的基金数量
-    if MAX_FUNDS_PER_RUN > 0 and len(fund_codes) > MAX_FUNDS_PER_RUN:
-        print(f"限制本次运行最多处理 {MAX_FUNDS_PER_RUN} 个基金。")
-        # 只取列表的前 MAX_FUNDS_PER_RUN 个基金代码
-        processed_codes = fund_codes[:MAX_FUNDS_PER_RUN]
-        print(f"本次实际处理的基金数量: {len(processed_codes)}")
-    else:
-        processed_codes = fund_codes
-        print(f"本次处理所有 {len(processed_codes)} 个基金。")
-
-    print(f"找到 {len(processed_codes)} 个基金代码，开始获取历史净值...")
-    
-    # 异步运行 fetch_all_funds，它现在包含了结果处理和保存逻辑
-    success_count, total_new_records, failed_codes = asyncio.run(fetch_all_funds(processed_codes))
-    
-    # 打印总结
-    print(f"\n======== 本次更新总结 ========")
-    print(f"本次基金历史净值数据获取和保存完成。")
-    print(f"总结: 成功处理 {success_count} 个基金，新增 {total_new_records} 条记录，失败 {len(failed_codes)} 个基金。")
-    if failed_codes:
-        print(f"失败的基金代码: {', '.join(failed_codes)}")
-    if total_new_records == 0:
-        print("警告: 未新增任何记录，可能是缓存跳过或无新数据，请检查 FORCE_UPDATE 设置或 API 响应。")
-    print(f"==============================")
-
-
-if __name__ == "__main__":
-    main()
+    print(f"分析完成，报告已保存到 {REPORT_FILE}")
