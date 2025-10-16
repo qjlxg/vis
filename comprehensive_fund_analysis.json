@@ -1,47 +1,103 @@
 [
     {
-        "fund_code": "000004",
+        "fund_code": "000850",
         "fund_details": [
             {
-                "业绩比较基准": "中信标普可转债指数收益率×70%+中证综合债券指数收益率×20%+上证红利指数×10%",
-                "份额规模": "0.968亿份（截止至：2025年06月30日）",
-                "发行日期": "2013年02月25日",
-                "基金代码": "000004（前端）",
-                "基金全称": "中海可转换债券债券型证券投资基金",
-                "基金托管人": "农业银行",
-                "基金简称": "中海可转债债券C",
-                "基金管理人": "中海基金",
-                "基金类型": "债券型-混合二级",
-                "基金经理人": "梅寓寒",
-                "夏普比率(近近1年)": 2.03,
-                "夏普比率(近近2年)": 0.72,
-                "夏普比率(近近3年)": 0.32,
-                "成立日期/规模": "2013年03月20日 / 10.054亿份",
-                "成立来分红": "每份累计0.21元（1次）",
+                "业绩比较基准": "中证800指数*60%+中债新综合指数*40%",
+                "份额规模": "1.2342亿份（截止至：2025年06月30日）",
+                "发行日期": "2014年10月27日",
+                "基金代码": "000850（前端）",
+                "基金全称": "汇丰晋信双核策略混合型证券投资基金",
+                "基金托管人": "交通银行",
+                "基金简称": "汇丰晋信双核策略混合C",
+                "基金管理人": "汇丰晋信基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "韦钰",
+                "夏普比率(近近1年)": 2.35,
+                "夏普比率(近近2年)": 0.9,
+                "夏普比率(近近3年)": 0.58,
+                "成立日期/规模": "2014年11月26日 / 10.071亿份",
+                "成立来分红": "每份累计0.84元（4次）",
                 "托管费率": "0.20%（每年）",
                 "最高申购费率": "0.00%（前端）",
                 "最高认购费率": "0.00%（前端）",
                 "最高赎回费率": "1.50%（前端）",
-                "管理费率": "0.75%（每年）",
-                "资产规模": "0.87亿元（截止至：2025年06月30日）",
+                "管理费率": "1.20%（每年）",
+                "资产规模": "1.63亿元（截止至：2025年06月30日）",
                 "跟踪标的": "该基金无跟踪标的",
-                "销售服务费率": "0.40%（每年）"
+                "销售服务费率": "0.50%（每年）"
             }
         ],
         "fund_holdings": [
             {
-                "stock_code": "000858",
-                "stock_name": "五粮液",
-                "proportion": 0.43,
-                "shares": 0.66,
-                "value": 86.69
+                "stock_code": "603977",
+                "stock_name": "国泰集团",
+                "proportion": 6.21,
+                "shares": 198.78,
+                "value": 2494.69
             },
             {
-                "stock_code": "600887",
-                "stock_name": "伊利股份",
-                "proportion": 0.37,
-                "shares": 2.66,
-                "value": 74.69
+                "stock_code": "603950",
+                "stock_name": "长源东谷",
+                "proportion": 5.19,
+                "shares": 83.23,
+                "value": 2083.3
+            },
+            {
+                "stock_code": "002171",
+                "stock_name": "楚江新材",
+                "proportion": 4.82,
+                "shares": 198.82,
+                "value": 1934.52
+            },
+            {
+                "stock_code": "002683",
+                "stock_name": "广东宏大",
+                "proportion": 4.48,
+                "shares": 53.01,
+                "value": 1799.16
+            },
+            {
+                "stock_code": "002487",
+                "stock_name": "大金重工",
+                "proportion": 4.46,
+                "shares": 54.48,
+                "value": 1792.39
+            },
+            {
+                "stock_code": "002947",
+                "stock_name": "恒铭达",
+                "proportion": 4.29,
+                "shares": 51.91,
+                "value": 1722.89
+            },
+            {
+                "stock_code": "001283",
+                "stock_name": "豪鹏科技",
+                "proportion": 4.22,
+                "shares": 31.12,
+                "value": 1694.48
+            },
+            {
+                "stock_code": "688596",
+                "stock_name": "正帆科技",
+                "proportion": 4.1,
+                "shares": 48.47,
+                "value": 1644.12
+            },
+            {
+                "stock_code": "600933",
+                "stock_name": "爱柯迪",
+                "proportion": 4.02,
+                "shares": 100.9,
+                "value": 1615.41
+            },
+            {
+                "stock_code": "688789",
+                "stock_name": "宏华数科",
+                "proportion": 3.69,
+                "shares": 20.28,
+                "value": 1481.19
             }
         ],
         "fund_managers": [],
@@ -50,597 +106,184 @@
         }
     },
     {
-        "fund_code": "000016",
+        "fund_code": "001174",
+        "fund_details": {},
+        "fund_holdings": [
+            {
+                "stock_code": "688981",
+                "stock_name": "中芯国际",
+                "proportion": 7.24,
+                "shares": 66.0,
+                "value": 5819.22
+            },
+            {
+                "stock_code": "688347",
+                "stock_name": "华虹公司",
+                "proportion": 6.83,
+                "shares": 100.0,
+                "value": 5491.0
+            },
+            {
+                "stock_code": "688502",
+                "stock_name": "茂莱光学",
+                "proportion": 6.8,
+                "shares": 19.01,
+                "value": 5467.73
+            },
+            {
+                "stock_code": "301392",
+                "stock_name": "汇成真空",
+                "proportion": 6.52,
+                "shares": 44.01,
+                "value": 5246.29
+            },
+            {
+                "stock_code": "001212",
+                "stock_name": "中旗新材",
+                "proportion": 5.97,
+                "shares": 111.0,
+                "value": 4804.09
+            },
+            {
+                "stock_code": "688037",
+                "stock_name": "芯源微",
+                "proportion": 5.2,
+                "shares": 39.0,
+                "value": 4181.23
+            },
+            {
+                "stock_code": "301421",
+                "stock_name": "波长光电",
+                "proportion": 5.17,
+                "shares": 52.0,
+                "value": 4159.48
+            },
+            {
+                "stock_code": "002222",
+                "stock_name": "福晶科技",
+                "proportion": 5.1,
+                "shares": 120.0,
+                "value": 4104.0
+            },
+            {
+                "stock_code": "688008",
+                "stock_name": "澜起科技",
+                "proportion": 5.1,
+                "shares": 50.0,
+                "value": 4100.0
+            },
+            {
+                "stock_code": "688012",
+                "stock_name": "中微公司",
+                "proportion": 4.98,
+                "shares": 21.99,
+                "value": 4008.3
+            }
+        ],
+        "fund_managers": [],
+        "risk_metrics": {
+            "error": "风险参数计算失败"
+        }
+    },
+    {
+        "fund_code": "001301",
         "fund_details": [
             {
-                "业绩比较基准": "中债综合指数",
-                "份额规模": "14.4465亿份（截止至：2025年06月30日）",
-                "发行日期": "2013年02月21日",
-                "基金代码": "000016（前端）",
-                "基金全称": "华夏纯债债券型证券投资基金",
-                "基金托管人": "建设银行",
-                "基金简称": "华夏纯债债券C",
-                "基金管理人": "华夏基金",
-                "基金类型": "债券型-长债",
-                "基金经理人": "柳万军",
-                "夏普比率(近近1年)": 1.39,
-                "夏普比率(近近2年)": 1.87,
-                "夏普比率(近近3年)": 1.53,
-                "成立日期/规模": "2013年03月08日 / 52.127亿份",
-                "成立来分红": "每份累计0.33元（9次）",
-                "托管费率": "0.10%（每年）",
+                "业绩比较基准": "中证500指数收益率*60%+中债综合指数收益率*40%",
+                "份额规模": "3.466亿份（截止至：2025年06月30日）",
+                "发行日期": "2015年05月11日",
+                "基金代码": "001301（前端）",
+                "基金全称": "大成睿景灵活配置混合型证券投资基金",
+                "基金托管人": "广发证券",
+                "基金简称": "大成睿景灵活配置混合C",
+                "基金管理人": "大成基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "韩创",
+                "夏普比率(近近1年)": 1.72,
+                "夏普比率(近近2年)": 0.81,
+                "夏普比率(近近3年)": 0.32,
+                "成立日期/规模": "2015年05月26日 / 42.355亿份",
+                "成立来分红": "每份累计0.00元（0次）",
+                "托管费率": "0.20%（每年）",
                 "最高申购费率": "0.00%（前端）",
                 "最高认购费率": "0.00%（前端）",
                 "最高赎回费率": "1.50%（前端）",
-                "管理费率": "0.30%（每年）",
-                "资产规模": "16.86亿元（截止至：2025年06月30日）",
+                "管理费率": "1.20%（每年）",
+                "资产规模": "7.12亿元（截止至：2025年06月30日）",
                 "跟踪标的": "该基金无跟踪标的",
-                "销售服务费率": "0.40%（每年）"
+                "销售服务费率": "0.80%（每年）"
             }
         ],
-        "fund_holdings": [],
-        "fund_managers": [],
-        "risk_metrics": {
-            "error": "风险参数计算失败"
-        }
-    },
-    {
-        "fund_code": "000025",
-        "fund_details": {},
-        "fund_holdings": [],
-        "fund_managers": [],
-        "risk_metrics": {
-            "error": "风险参数计算失败"
-        }
-    },
-    {
-        "fund_code": "000033",
-        "fund_details": {},
-        "fund_holdings": [],
-        "fund_managers": [],
-        "risk_metrics": {
-            "error": "风险参数计算失败"
-        }
-    },
-    {
-        "fund_code": "000048",
-        "fund_details": {},
         "fund_holdings": [
             {
-                "stock_code": "301008",
-                "stock_name": "宏昌科技",
-                "proportion": 1.75,
-                "shares": 165.9,
-                "value": 3802.44
+                "stock_code": "600547",
+                "stock_name": "山东黄金",
+                "proportion": 9.76,
+                "shares": 715.67,
+                "value": 22851.3
             },
             {
-                "stock_code": "603966",
-                "stock_name": "法兰泰克",
-                "proportion": 0.91,
-                "shares": 212.85,
-                "value": 1975.21
+                "stock_code": "601058",
+                "stock_name": "赛轮轮胎",
+                "proportion": 9.21,
+                "shares": 1643.89,
+                "value": 21567.88
             },
             {
-                "stock_code": "300567",
-                "stock_name": "精测电子",
-                "proportion": 0.87,
-                "shares": 31.07,
-                "value": 1883.41
+                "stock_code": "600259",
+                "stock_name": "广晟有色",
+                "proportion": 7.59,
+                "shares": 334.88,
+                "value": 17788.85
             },
             {
-                "stock_code": "603678",
-                "stock_name": "火炬电子",
-                "proportion": 0.54,
-                "shares": 30.9,
-                "value": 1174.96
+                "stock_code": "600489",
+                "stock_name": "中金黄金",
+                "proportion": 7.55,
+                "shares": 1208.96,
+                "value": 17687.07
             },
             {
-                "stock_code": "002966",
-                "stock_name": "苏州银行",
-                "proportion": 0.37,
-                "shares": 91.11,
-                "value": 799.99
+                "stock_code": "600378",
+                "stock_name": "昊华科技",
+                "proportion": 7.45,
+                "shares": 644.55,
+                "value": 17447.94
             },
             {
-                "stock_code": "300814",
-                "stock_name": "中富电路",
-                "proportion": 0.0,
-                "shares": 0.01,
-                "value": 0.24
-            }
-        ],
-        "fund_managers": [
-            {
-                "fund_code": "000048",
-                "start_date": "023277",
-                "end_date": "华夏鼎合债券A",
-                "fund_managers": "债券型-长债",
-                "term": "2025-01-23",
-                "management_return": "至今",
-                "management_rank": "266天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "023278",
-                "end_date": "华夏鼎合债券C",
-                "fund_managers": "债券型-长债",
-                "term": "2025-01-23",
-                "management_return": "至今",
-                "management_rank": "266天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "021657",
-                "end_date": "华夏纯债债券D",
-                "fund_managers": "债券型-长债",
-                "term": "2024-06-19",
-                "management_return": "至今",
-                "management_rank": "1年又119天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "015067",
-                "end_date": "华夏永康添福混合C",
-                "fund_managers": "混合型-偏债",
-                "term": "2022-02-22",
-                "management_return": "至今",
-                "management_rank": "3年又237天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "011624",
-                "end_date": "华夏卓享债券A",
-                "fund_managers": "债券型-混合二级",
-                "term": "2021-08-24",
-                "management_return": "2023-03-21",
-                "management_rank": "1年又209天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "011625",
-                "end_date": "华夏卓享债券C",
-                "fund_managers": "债券型-混合二级",
-                "term": "2021-08-24",
-                "management_return": "2023-03-21",
-                "management_rank": "1年又209天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "011743",
-                "end_date": "华夏兴源稳健一年持有混合A",
-                "fund_managers": "混合型-偏债",
-                "term": "2021-06-24",
-                "management_return": "至今",
-                "management_rank": "4年又115天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "011744",
-                "end_date": "华夏兴源稳健一年持有混合C",
-                "fund_managers": "混合型-偏债",
-                "term": "2021-06-24",
-                "management_return": "至今",
-                "management_rank": "4年又115天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "010014",
-                "end_date": "华夏鼎清债券A",
-                "fund_managers": "债券型-混合二级",
-                "term": "2020-12-03",
-                "management_return": "至今",
-                "management_rank": "4年又318天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "010015",
-                "end_date": "华夏鼎清债券C",
-                "fund_managers": "债券型-混合二级",
-                "term": "2020-12-03",
-                "management_return": "至今",
-                "management_rank": "4年又318天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "008947",
-                "end_date": "华夏鼎源债券A",
-                "fund_managers": "债券型-混合二级",
-                "term": "2020-05-20",
-                "management_return": "2021-12-21",
-                "management_rank": "1年又215天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "008948",
-                "end_date": "华夏鼎源债券C",
-                "fund_managers": "债券型-混合二级",
-                "term": "2020-05-20",
-                "management_return": "2021-12-21",
-                "management_rank": "1年又215天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "008212",
-                "end_date": "华夏新机遇混合C",
-                "fund_managers": "混合型-灵活",
-                "term": "2019-11-15",
-                "management_return": "2019-11-29",
-                "management_rank": "14天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "007282",
-                "end_date": "华夏鼎淳债券A",
-                "fund_managers": "债券型-混合二级",
-                "term": "2019-08-21",
-                "management_return": "2020-08-25",
-                "management_rank": "1年又5天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "007283",
-                "end_date": "华夏鼎淳债券C",
-                "fund_managers": "债券型-混合二级",
-                "term": "2019-08-21",
-                "management_return": "2020-08-25",
-                "management_rank": "1年又5天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "006665",
-                "end_date": "华夏鼎康债券A",
-                "fund_managers": "债券型-长债",
-                "term": "2019-08-12",
-                "management_return": "2020-08-25",
-                "management_rank": "1年又14天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "006666",
-                "end_date": "华夏鼎康债券C",
-                "fund_managers": "债券型-长债",
-                "term": "2019-08-12",
-                "management_return": "2020-08-25",
-                "management_rank": "1年又14天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "005128",
-                "end_date": "华夏永康添福混合A",
-                "fund_managers": "混合型-偏债",
-                "term": "2019-07-15",
-                "management_return": "至今",
-                "management_rank": "6年又95天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "004063",
-                "end_date": "华夏恒融债券",
-                "fund_managers": "债券型-混合二级",
-                "term": "2019-04-25",
-                "management_return": "2021-01-27",
-                "management_rank": "1年又278天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "004979",
-                "end_date": "华夏鼎诺三个月定开债A",
-                "fund_managers": "债券型-长债",
-                "term": "2018-12-17",
-                "management_return": "2020-01-06",
-                "management_rank": "1年又20天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "004980",
-                "end_date": "华夏鼎诺三个月定开债C",
-                "fund_managers": "债券型-长债",
-                "term": "2018-12-17",
-                "management_return": "2020-01-06",
-                "management_rank": "1年又20天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "005886",
-                "end_date": "华夏鼎沛债券A",
-                "fund_managers": "债券型-混合二级",
-                "term": "2018-06-26",
-                "management_return": "2022-02-09",
-                "management_rank": "3年又229天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "005887",
-                "end_date": "华夏鼎沛债券C",
-                "fund_managers": "债券型-混合二级",
-                "term": "2018-06-26",
-                "management_return": "2022-02-09",
-                "management_rank": "3年又229天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "005213",
-                "end_date": "华夏鼎旺三个月定开债A",
-                "fund_managers": "债券型-长债",
-                "term": "2018-04-24",
-                "management_return": "2019-07-29",
-                "management_rank": "1年又96天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "005214",
-                "end_date": "华夏鼎旺三个月定开债C",
-                "fund_managers": "债券型-长债",
-                "term": "2018-04-24",
-                "management_return": "2019-07-29",
-                "management_rank": "1年又96天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "005407",
-                "end_date": "华夏鼎泰六个月定开债A",
-                "fund_managers": "债券型-长债",
-                "term": "2018-04-13",
-                "management_return": "2024-11-25",
-                "management_rank": "6年又228天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "005408",
-                "end_date": "华夏鼎泰六个月定开债C",
-                "fund_managers": "债券型-长债",
-                "term": "2018-04-13",
-                "management_return": "2024-11-25",
-                "management_rank": "6年又228天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "000015",
-                "end_date": "华夏纯债债券A",
-                "fund_managers": "债券型-长债",
-                "term": "2017-09-08",
-                "management_return": "至今",
-                "management_rank": "8年又40天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "000016",
-                "end_date": "华夏纯债债券C",
-                "fund_managers": "债券型-长债",
-                "term": "2017-09-08",
-                "management_return": "至今",
-                "management_rank": "8年又40天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "002411",
-                "end_date": "华夏新机遇混合A",
-                "fund_managers": "混合型-灵活",
-                "term": "2016-03-30",
-                "management_return": "2019-11-29",
-                "management_rank": "3年又244天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "002552",
-                "end_date": "华夏恒利定开债",
-                "fund_managers": "债券型-混合一级",
-                "term": "2016-03-29",
-                "management_return": "2019-11-29",
-                "management_rank": "3年又245天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "002409",
-                "end_date": "华夏新活力混合A",
-                "fund_managers": "混合型-灵活",
-                "term": "2016-02-23",
-                "management_return": "2018-12-17",
-                "management_rank": "2年又298天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "002410",
-                "end_date": "华夏新活力混合C",
-                "fund_managers": "混合型-灵活",
-                "term": "2016-02-23",
-                "management_return": "2018-12-17",
-                "management_rank": "2年又298天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "000047",
-                "end_date": "华夏双债债券A",
-                "fund_managers": "债券型-混合一级",
-                "term": "2015-07-16",
-                "management_return": "至今",
-                "management_rank": "10年又95天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "000048",
-                "end_date": "华夏双债债券C",
-                "fund_managers": "债券型-混合一级",
-                "term": "2015-07-16",
-                "management_return": "至今",
-                "management_rank": "10年又95天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "001021",
-                "end_date": "华夏亚债中国指数A",
-                "fund_managers": "指数型-固收",
-                "term": "2015-07-16",
-                "management_return": "2020-01-06",
-                "management_rank": "4年又175天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "001023",
-                "end_date": "华夏亚债中国指数C",
-                "fund_managers": "指数型-固收",
-                "term": "2015-07-16",
-                "management_return": "2020-01-06",
-                "management_rank": "4年又175天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "000645",
-                "end_date": "华夏薪金宝货币",
-                "fund_managers": "货币型-普通货币",
-                "term": "2014-05-26",
-                "management_return": "2017-08-07",
-                "management_rank": "3年又74天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "001031",
-                "end_date": "华夏安康债券A",
-                "fund_managers": "债券型-混合二级",
-                "term": "2014-05-05",
-                "management_return": "2024-07-12",
-                "management_rank": "10年又71天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "001033",
-                "end_date": "华夏安康债券C",
-                "fund_managers": "债券型-混合二级",
-                "term": "2014-05-05",
-                "management_return": "2024-07-12",
-                "management_rank": "10年又71天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "288101",
-                "end_date": "华夏货币A",
-                "fund_managers": "货币型-普通货币",
-                "term": "2013-12-31",
-                "management_return": "2017-08-07",
-                "management_rank": "3年又220天"
-            },
-            {
-                "fund_code": "000048",
-                "start_date": "288201",
-                "end_date": "华夏货币B",
-                "fund_managers": "货币型-普通货币",
-                "term": "2013-12-31",
-                "management_return": "2017-08-07",
-                "management_rank": "3年又220天"
-            }
-        ],
-        "risk_metrics": {
-            "error": "风险参数计算失败"
-        }
-    },
-    {
-        "fund_code": "000064",
-        "fund_details": [
-            {
-                "业绩比较基准": "1/2*[同期1年期银行定期存款利率(税后)+同期2年期银行定期存款利率(税后)]",
-                "份额规模": "1.9458亿份（截止至：2025年06月30日）",
-                "发行日期": "2013年05月27日",
-                "基金代码": "000064（前端）",
-                "基金全称": "摩根士丹利纯债稳定增利18个月定期开放债券型证券投资基金",
-                "基金托管人": "民生银行",
-                "基金简称": "大摩18个月定开债C",
-                "基金管理人": "摩根士丹利基金",
-                "基金类型": "债券型-长债",
-                "基金经理人": "施同亮、吴慧文",
-                "夏普比率(近近1年)": NaN,
-                "夏普比率(近近2年)": NaN,
-                "夏普比率(近近3年)": NaN,
-                "成立日期/规模": "2013年06月25日 / 12.246亿份",
-                "成立来分红": "每份累计0.68元（44次）",
-                "托管费率": "0.10%（每年）",
-                "最高申购费率": "0.00%（前端）",
-                "最高认购费率": "0.00%（前端）",
-                "最高赎回费率": "1.50%（前端）",
-                "管理费率": "0.30%（每年）",
-                "资产规模": "2.12亿元（截止至：2025年06月30日）",
-                "跟踪标的": "该基金无跟踪标的",
-                "销售服务费率": "0.40%（每年）"
-            }
-        ],
-        "fund_holdings": [],
-        "fund_managers": [],
-        "risk_metrics": {
-            "error": "风险参数计算失败"
-        }
-    },
-    {
-        "fund_code": "000068",
-        "fund_details": [],
-        "fund_holdings": [
-            {
-                "stock_code": "601288",
-                "stock_name": "农业银行",
-                "proportion": 2.55,
-                "shares": 70.03,
-                "value": 373.96
-            },
-            {
-                "stock_code": "688041",
-                "stock_name": "海光信息",
-                "proportion": 2.1,
-                "shares": 2.05,
-                "value": 307.53
-            },
-            {
-                "stock_code": "601919",
-                "stock_name": "中远海控",
-                "proportion": 1.83,
-                "shares": 17.34,
-                "value": 268.77
-            },
-            {
-                "stock_code": "300033",
-                "stock_name": "同花顺",
-                "proportion": 1.79,
-                "shares": 0.91,
-                "value": 261.63
-            },
-            {
-                "stock_code": "600938",
-                "stock_name": "中国海油",
-                "proportion": 1.71,
-                "shares": 8.5,
-                "value": 250.84
-            },
-            {
-                "stock_code": "688111",
-                "stock_name": "金山办公",
-                "proportion": 1.69,
-                "shares": 0.87,
-                "value": 247.81
-            },
-            {
-                "stock_code": "000429",
-                "stock_name": "粤高速A",
-                "proportion": 1.68,
-                "shares": 16.76,
-                "value": 246.37
+                "stock_code": "000426",
+                "stock_name": "兴业银锡",
+                "proportion": 6.57,
+                "shares": 973.64,
+                "value": 15383.52
             },
             {
                 "stock_code": "601899",
                 "stock_name": "紫金矿业",
-                "proportion": 1.4,
-                "shares": 13.61,
-                "value": 205.78
+                "proportion": 6.14,
+                "shares": 737.54,
+                "value": 14382.09
             },
             {
-                "stock_code": "002371",
-                "stock_name": "北方华创",
-                "proportion": 1.36,
-                "shares": 0.51,
-                "value": 199.41
+                "stock_code": "000807",
+                "stock_name": "云铝股份",
+                "proportion": 4.94,
+                "shares": 724.2,
+                "value": 11572.72
             },
             {
-                "stock_code": "000333",
-                "stock_name": "美的集团",
-                "proportion": 1.3,
-                "shares": 2.54,
-                "value": 191.06
+                "stock_code": "601688",
+                "stock_name": "华泰证券",
+                "proportion": 4.78,
+                "shares": 629.01,
+                "value": 11202.67
+            },
+            {
+                "stock_code": "601600",
+                "stock_name": "中国铝业",
+                "proportion": 4.0,
+                "shares": 1330.64,
+                "value": 9367.71
             }
         ],
         "fund_managers": [],
@@ -649,15 +292,78 @@
         }
     },
     {
-        "fund_code": "000070",
+        "fund_code": "001326",
         "fund_details": {},
         "fund_holdings": [
             {
-                "stock_code": "600016",
-                "stock_name": "民生银行",
-                "proportion": 5.5,
-                "shares": 328.45,
-                "value": 3264.83
+                "stock_code": "300476",
+                "stock_name": "胜宏科技",
+                "proportion": 5.9,
+                "shares": 2.65,
+                "value": 356.11
+            },
+            {
+                "stock_code": "300394",
+                "stock_name": "天孚通信",
+                "proportion": 5.65,
+                "shares": 4.27,
+                "value": 340.92
+            },
+            {
+                "stock_code": "300308",
+                "stock_name": "中际旭创",
+                "proportion": 5.41,
+                "shares": 2.24,
+                "value": 326.73
+            },
+            {
+                "stock_code": "600760",
+                "stock_name": "中航沈飞",
+                "proportion": 4.8,
+                "shares": 4.94,
+                "value": 289.58
+            },
+            {
+                "stock_code": "300922",
+                "stock_name": "天秦装备",
+                "proportion": 4.05,
+                "shares": 8.75,
+                "value": 244.59
+            },
+            {
+                "stock_code": "002545",
+                "stock_name": "东方铁塔",
+                "proportion": 3.86,
+                "shares": 26.22,
+                "value": 233.1
+            },
+            {
+                "stock_code": "601717",
+                "stock_name": "中创智领",
+                "proportion": 3.6,
+                "shares": 13.09,
+                "value": 217.56
+            },
+            {
+                "stock_code": "688266",
+                "stock_name": "泽璟制药",
+                "proportion": 3.45,
+                "shares": 1.94,
+                "value": 208.3
+            },
+            {
+                "stock_code": "002130",
+                "stock_name": "沃尔核材",
+                "proportion": 3.29,
+                "shares": 8.33,
+                "value": 198.42
+            },
+            {
+                "stock_code": "300765",
+                "stock_name": "新诺威",
+                "proportion": 3.13,
+                "shares": 3.66,
+                "value": 189.19
             }
         ],
         "fund_managers": [],
@@ -666,315 +372,1817 @@
         }
     },
     {
-        "fund_code": "000077",
+        "fund_code": "001407",
+        "fund_details": {},
+        "fund_holdings": [
+            {
+                "stock_code": "300502",
+                "stock_name": "新易盛",
+                "proportion": 8.9,
+                "shares": 44.61,
+                "value": 5666.87
+            },
+            {
+                "stock_code": "300308",
+                "stock_name": "中际旭创",
+                "proportion": 6.99,
+                "shares": 30.54,
+                "value": 4454.56
+            },
+            {
+                "stock_code": "002384",
+                "stock_name": "东山精密",
+                "proportion": 6.64,
+                "shares": 111.92,
+                "value": 4227.22
+            },
+            {
+                "stock_code": "688183",
+                "stock_name": "生益电子",
+                "proportion": 6.16,
+                "shares": 76.6,
+                "value": 3921.83
+            },
+            {
+                "stock_code": "300548",
+                "stock_name": "长芯博创",
+                "proportion": 6.13,
+                "shares": 58.47,
+                "value": 3904.04
+            },
+            {
+                "stock_code": "300723",
+                "stock_name": "一品红",
+                "proportion": 4.7,
+                "shares": 59.67,
+                "value": 2990.76
+            },
+            {
+                "stock_code": "688068",
+                "stock_name": "热景生物",
+                "proportion": 4.61,
+                "shares": 20.95,
+                "value": 2936.37
+            },
+            {
+                "stock_code": "688205",
+                "stock_name": "德科立",
+                "proportion": 3.9,
+                "shares": 39.67,
+                "value": 2487.18
+            },
+            {
+                "stock_code": "688498",
+                "stock_name": "源杰科技",
+                "proportion": 3.87,
+                "shares": 12.63,
+                "value": 2462.62
+            },
+            {
+                "stock_code": "002602",
+                "stock_name": "ST华通",
+                "proportion": 3.82,
+                "shares": 219.7,
+                "value": 2434.28
+            }
+        ],
+        "fund_managers": [
+            {
+                "fund_code": "001407",
+                "start_date": "000688",
+                "end_date": "景顺长城研究精选股票A",
+                "fund_managers": "股票型",
+                "term": "2025-08-09",
+                "management_return": "至今",
+                "management_rank": "69天"
+            },
+            {
+                "fund_code": "001407",
+                "start_date": "018998",
+                "end_date": "景顺长城研究精选股票C",
+                "fund_managers": "股票型",
+                "term": "2025-08-09",
+                "management_return": "至今",
+                "management_rank": "69天"
+            },
+            {
+                "fund_code": "001407",
+                "start_date": "023512",
+                "end_date": "景顺长城景颐丰利债券F",
+                "fund_managers": "债券型-混合二级",
+                "term": "2025-02-21",
+                "management_return": "至今",
+                "management_rank": "238天"
+            },
+            {
+                "fund_code": "001407",
+                "start_date": "023265",
+                "end_date": "景顺长城智能生活混合C",
+                "fund_managers": "混合型-偏股",
+                "term": "2025-01-22",
+                "management_return": "至今",
+                "management_rank": "268天"
+            },
+            {
+                "fund_code": "001407",
+                "start_date": "005914",
+                "end_date": "景顺长城智能生活混合A",
+                "fund_managers": "混合型-偏股",
+                "term": "2024-08-16",
+                "management_return": "至今",
+                "management_rank": "1年又62天"
+            },
+            {
+                "fund_code": "001407",
+                "start_date": "001194",
+                "end_date": "景顺长城稳健回报混合A",
+                "fund_managers": "混合型-灵活",
+                "term": "2024-08-13",
+                "management_return": "至今",
+                "management_rank": "1年又65天"
+            },
+            {
+                "fund_code": "001407",
+                "start_date": "001407",
+                "end_date": "景顺长城稳健回报混合C",
+                "fund_managers": "混合型-灵活",
+                "term": "2024-08-13",
+                "management_return": "至今",
+                "management_rank": "1年又65天"
+            },
+            {
+                "fund_code": "001407",
+                "start_date": "003504",
+                "end_date": "景顺长城景颐丰利债券A",
+                "fund_managers": "债券型-混合二级",
+                "term": "2024-07-10",
+                "management_return": "至今",
+                "management_rank": "1年又99天"
+            },
+            {
+                "fund_code": "001407",
+                "start_date": "003505",
+                "end_date": "景顺长城景颐丰利债券C",
+                "fund_managers": "债券型-混合二级",
+                "term": "2024-07-10",
+                "management_return": "至今",
+                "management_rank": "1年又99天"
+            },
+            {
+                "fund_code": "001407",
+                "start_date": "011899",
+                "end_date": "长安鑫瑞科技6个月定开混合A",
+                "fund_managers": "混合型-偏股",
+                "term": "2022-10-27",
+                "management_return": "2023-11-24",
+                "management_rank": "1年又28天"
+            },
+            {
+                "fund_code": "001407",
+                "start_date": "011900",
+                "end_date": "长安鑫瑞科技6个月定开混合C",
+                "fund_managers": "混合型-偏股",
+                "term": "2022-10-27",
+                "management_return": "2023-11-24",
+                "management_rank": "1年又28天"
+            },
+            {
+                "fund_code": "001407",
+                "start_date": "016579",
+                "end_date": "长安宏观策略混合C",
+                "fund_managers": "混合型-偏股",
+                "term": "2022-09-19",
+                "management_return": "2023-11-24",
+                "management_rank": "1年又66天"
+            },
+            {
+                "fund_code": "001407",
+                "start_date": "005588",
+                "end_date": "长安裕腾混合A",
+                "fund_managers": "混合型-灵活",
+                "term": "2021-08-23",
+                "management_return": "2023-10-23",
+                "management_rank": "2年又61天"
+            },
+            {
+                "fund_code": "001407",
+                "start_date": "005592",
+                "end_date": "长安裕腾混合C",
+                "fund_managers": "混合型-灵活",
+                "term": "2021-08-23",
+                "management_return": "2023-10-23",
+                "management_rank": "2年又61天"
+            },
+            {
+                "fund_code": "001407",
+                "start_date": "740001",
+                "end_date": "长安宏观策略混合A",
+                "fund_managers": "混合型-偏股",
+                "term": "2021-08-13",
+                "management_return": "2023-11-24",
+                "management_rank": "2年又103天"
+            }
+        ],
+        "risk_metrics": {
+            "error": "风险参数计算失败"
+        }
+    },
+    {
+        "fund_code": "001467",
         "fund_details": [
             {
-                "业绩比较基准": "一年期银行定期存款税后收益率+1.2%",
-                "份额规模": "0.2276亿份（截止至：2025年06月30日）",
-                "发行日期": "2013年04月22日",
-                "基金代码": "000077（前端）",
-                "基金全称": "工银瑞信信用纯债一年定期开放债券型证券投资基金",
-                "基金托管人": "招商银行",
-                "基金简称": "工银信用纯债一年定开债C",
-                "基金管理人": "工银瑞信基金",
-                "基金类型": "债券型-长债",
-                "基金经理人": "何秀红、段玮",
-                "夏普比率(近近1年)": 0.95,
-                "夏普比率(近近2年)": 1.87,
-                "夏普比率(近近3年)": 1.45,
-                "成立日期/规模": "2013年05月22日 / 61.083亿份",
+                "业绩比较基准": "沪深300指数收益率×50%+上证国债指数收益率×50%",
+                "份额规模": "0.1339亿份（截止至：2025年06月30日）",
+                "发行日期": "2015年06月08日",
+                "基金代码": "001467（前端）",
+                "基金全称": "华富永鑫灵活配置混合型证券投资基金",
+                "基金托管人": "工商银行",
+                "基金简称": "华富永鑫灵活配置混合C",
+                "基金管理人": "华富基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "李孝华",
+                "夏普比率(近近1年)": 2.52,
+                "夏普比率(近近2年)": 1.16,
+                "夏普比率(近近3年)": 0.73,
+                "成立日期/规模": "2015年06月15日 / 7.923亿份",
+                "成立来分红": "每份累计0.00元（0次）",
+                "托管费率": "0.15%（每年）",
+                "最高申购费率": "0.00%（前端）",
+                "最高认购费率": "0.00%（前端）",
+                "最高赎回费率": "1.50%（前端）",
+                "管理费率": "0.60%（每年）",
+                "资产规模": "0.17亿元（截止至：2025年06月30日）",
+                "跟踪标的": "该基金无跟踪标的",
+                "销售服务费率": "0.10%（每年）"
+            }
+        ],
+        "fund_holdings": [
+            {
+                "stock_code": "600489",
+                "stock_name": "中金黄金",
+                "proportion": 9.93,
+                "shares": 16.97,
+                "value": 248.27
+            },
+            {
+                "stock_code": "002155",
+                "stock_name": "湖南黄金",
+                "proportion": 9.84,
+                "shares": 13.79,
+                "value": 246.15
+            },
+            {
+                "stock_code": "000975",
+                "stock_name": "山金国际",
+                "proportion": 9.77,
+                "shares": 12.9,
+                "value": 244.33
+            },
+            {
+                "stock_code": "601899",
+                "stock_name": "紫金矿业",
+                "proportion": 9.71,
+                "shares": 12.45,
+                "value": 242.78
+            },
+            {
+                "stock_code": "600988",
+                "stock_name": "赤峰黄金",
+                "proportion": 9.45,
+                "shares": 9.5,
+                "value": 236.36
+            },
+            {
+                "stock_code": "002237",
+                "stock_name": "恒邦股份",
+                "proportion": 9.44,
+                "shares": 20.01,
+                "value": 236.12
+            },
+            {
+                "stock_code": "601069",
+                "stock_name": "西部黄金",
+                "proportion": 9.42,
+                "shares": 11.58,
+                "value": 235.65
+            },
+            {
+                "stock_code": "600547",
+                "stock_name": "山东黄金",
+                "proportion": 9.11,
+                "shares": 7.14,
+                "value": 227.98
+            },
+            {
+                "stock_code": "001337",
+                "stock_name": "四川黄金",
+                "proportion": 6.31,
+                "shares": 6.51,
+                "value": 157.74
+            },
+            {
+                "stock_code": "000426",
+                "stock_name": "兴业银锡",
+                "proportion": 6.29,
+                "shares": 9.96,
+                "value": 157.37
+            }
+        ],
+        "fund_managers": [],
+        "risk_metrics": {
+            "error": "风险参数计算失败"
+        }
+    },
+    {
+        "fund_code": "001557",
+        "fund_details": {},
+        "fund_holdings": [
+            {
+                "stock_code": "603893",
+                "stock_name": "瑞芯微",
+                "proportion": 1.26,
+                "shares": 25.96,
+                "value": 3942.74
+            },
+            {
+                "stock_code": "300803",
+                "stock_name": "指南针",
+                "proportion": 1.24,
+                "shares": 48.34,
+                "value": 3899.39
+            },
+            {
+                "stock_code": "300207",
+                "stock_name": "欣旺达",
+                "proportion": 1.24,
+                "shares": 193.18,
+                "value": 3875.14
+            },
+            {
+                "stock_code": "688608",
+                "stock_name": "恒玄科技",
+                "proportion": 1.23,
+                "shares": 11.13,
+                "value": 3871.52
+            },
+            {
+                "stock_code": "002797",
+                "stock_name": "第一创业",
+                "proportion": 1.22,
+                "shares": 540.95,
+                "value": 3829.93
+            },
+            {
+                "stock_code": "688002",
+                "stock_name": "睿创微纳",
+                "proportion": 1.21,
+                "shares": 54.46,
+                "value": 3796.94
+            },
+            {
+                "stock_code": "300017",
+                "stock_name": "网宿科技",
+                "proportion": 1.2,
+                "shares": 350.44,
+                "value": 3756.72
+            },
+            {
+                "stock_code": "600352",
+                "stock_name": "浙江龙盛",
+                "proportion": 1.18,
+                "shares": 364.46,
+                "value": 3702.91
+            },
+            {
+                "stock_code": "002624",
+                "stock_name": "完美世界",
+                "proportion": 1.14,
+                "shares": 236.56,
+                "value": 3588.62
+            },
+            {
+                "stock_code": "000783",
+                "stock_name": "长江证券",
+                "proportion": 1.13,
+                "shares": 511.47,
+                "value": 3544.49
+            }
+        ],
+        "fund_managers": [],
+        "risk_metrics": {
+            "error": "风险参数计算失败"
+        }
+    },
+    {
+        "fund_code": "001593",
+        "fund_details": [],
+        "fund_holdings": [
+            {
+                "stock_code": "300750",
+                "stock_name": "宁德时代",
+                "proportion": 0.18,
+                "shares": 5.82,
+                "value": 1466.76
+            },
+            {
+                "stock_code": "300059",
+                "stock_name": "东方财富",
+                "proportion": 0.07,
+                "shares": 23.94,
+                "value": 553.68
+            },
+            {
+                "stock_code": "300124",
+                "stock_name": "汇川技术",
+                "proportion": 0.03,
+                "shares": 3.79,
+                "value": 244.98
+            },
+            {
+                "stock_code": "300308",
+                "stock_name": "中际旭创",
+                "proportion": 0.03,
+                "shares": 1.65,
+                "value": 240.68
+            },
+            {
+                "stock_code": "300760",
+                "stock_name": "迈瑞医疗",
+                "proportion": 0.03,
+                "shares": 1.05,
+                "value": 235.54
+            },
+            {
+                "stock_code": "300502",
+                "stock_name": "新易盛",
+                "proportion": 0.03,
+                "shares": 1.68,
+                "value": 213.39
+            },
+            {
+                "stock_code": "300274",
+                "stock_name": "阳光电源",
+                "proportion": 0.02,
+                "shares": 2.8,
+                "value": 189.88
+            },
+            {
+                "stock_code": "300498",
+                "stock_name": "温氏股份",
+                "proportion": 0.02,
+                "shares": 10.19,
+                "value": 174.09
+            },
+            {
+                "stock_code": "300476",
+                "stock_name": "胜宏科技",
+                "proportion": 0.02,
+                "shares": 1.17,
+                "value": 157.22
+            },
+            {
+                "stock_code": "300014",
+                "stock_name": "亿纬锂能",
+                "proportion": 0.01,
+                "shares": 2.41,
+                "value": 110.41
+            }
+        ],
+        "fund_managers": [],
+        "risk_metrics": {
+            "error": "风险参数计算失败"
+        }
+    },
+    {
+        "fund_code": "001618",
+        "fund_details": {},
+        "fund_holdings": [
+            {
+                "stock_code": "688256",
+                "stock_name": "寒武纪",
+                "proportion": 0.0,
+                "shares": 0.01,
+                "value": 3.25
+            },
+            {
+                "stock_code": "688012",
+                "stock_name": "中微公司",
+                "proportion": 0.0,
+                "shares": 0.01,
+                "value": 2.72
+            },
+            {
+                "stock_code": "688041",
+                "stock_name": "海光信息",
+                "proportion": 0.0,
+                "shares": 0.01,
+                "value": 1.02
+            },
+            {
+                "stock_code": "688981",
+                "stock_name": "中芯国际",
+                "proportion": 0.0,
+                "shares": 0.01,
+                "value": 0.92
+            },
+            {
+                "stock_code": "688099",
+                "stock_name": "晶晨股份",
+                "proportion": 0.0,
+                "shares": 0.01,
+                "value": 0.88
+            },
+            {
+                "stock_code": "688008",
+                "stock_name": "澜起科技",
+                "proportion": 0.0,
+                "shares": 0.01,
+                "value": 0.85
+            },
+            {
+                "stock_code": "688385",
+                "stock_name": "复旦微电",
+                "proportion": 0.0,
+                "shares": 0.01,
+                "value": 0.61
+            },
+            {
+                "stock_code": "688521",
+                "stock_name": "芯原股份",
+                "proportion": 0.0,
+                "shares": 0.0,
+                "value": 0.47
+            },
+            {
+                "stock_code": "300661",
+                "stock_name": "圣邦股份",
+                "proportion": 0.0,
+                "shares": 0.01,
+                "value": 0.44
+            },
+            {
+                "stock_code": "688525",
+                "stock_name": "佰维存储",
+                "proportion": 0.0,
+                "shares": 0.0,
+                "value": 0.25
+            }
+        ],
+        "fund_managers": [
+            {
+                "fund_code": "001618",
+                "start_date": "024885",
+                "end_date": "天弘国证港股通科技指数A",
+                "fund_managers": "指数型-股票",
+                "term": "2025-09-23",
+                "management_return": "至今",
+                "management_rank": "24天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "024886",
+                "end_date": "天弘国证港股通科技指数C",
+                "fund_managers": "指数型-股票",
+                "term": "2025-09-23",
+                "management_return": "至今",
+                "management_rank": "24天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "011839",
+                "end_date": "天弘中证人工智能A",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-30",
+                "management_return": "至今",
+                "management_rank": "79天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "011840",
+                "end_date": "天弘中证人工智能C",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-30",
+                "management_return": "至今",
+                "management_rank": "79天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "019170",
+                "end_date": "天弘中证沪港深云计算产业ETF发起联接C",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-30",
+                "management_return": "至今",
+                "management_rank": "79天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "019171",
+                "end_date": "天弘中证沪港深云计算产业ETF发起联接A",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-30",
+                "management_return": "至今",
+                "management_rank": "79天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "021532",
+                "end_date": "天弘中证半导体材料设备主题指数发起A",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-30",
+                "management_return": "至今",
+                "management_rank": "79天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "021533",
+                "end_date": "天弘中证半导体材料设备主题指数发起C",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-30",
+                "management_return": "至今",
+                "management_rank": "79天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "517390",
+                "end_date": "天弘中证沪港深云计算产业ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-30",
+                "management_return": "至今",
+                "management_rank": "79天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "001592",
+                "end_date": "天弘创业板ETF联接A",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-19",
+                "management_return": "至今",
+                "management_rank": "90天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "001593",
+                "end_date": "天弘创业板ETF联接C",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-19",
+                "management_return": "至今",
+                "management_rank": "90天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "001617",
+                "end_date": "天弘中证电子ETF联接A",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-19",
+                "management_return": "至今",
+                "management_rank": "90天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "001618",
+                "end_date": "天弘中证电子ETF联接C",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-19",
+                "management_return": "至今",
+                "management_rank": "90天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "001629",
+                "end_date": "天弘中证计算机ETF联接A",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-19",
+                "management_return": "至今",
+                "management_rank": "90天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "001630",
+                "end_date": "天弘中证计算机ETF联接C",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-19",
+                "management_return": "至今",
+                "management_rank": "90天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "012552",
+                "end_date": "天弘中证芯片产业ETF发起式联接A",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-19",
+                "management_return": "至今",
+                "management_rank": "90天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "012553",
+                "end_date": "天弘中证芯片产业ETF发起式联接C",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-19",
+                "management_return": "至今",
+                "management_rank": "90天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "022960",
+                "end_date": "天弘创业板ETF联接Y",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-19",
+                "management_return": "至今",
+                "management_rank": "90天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "159310",
+                "end_date": "天弘中证芯片产业ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-19",
+                "management_return": "至今",
+                "management_rank": "90天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "159977",
+                "end_date": "天弘创业板ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-19",
+                "management_return": "至今",
+                "management_rank": "90天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "159997",
+                "end_date": "天弘中证电子ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-19",
+                "management_return": "至今",
+                "management_rank": "90天"
+            },
+            {
+                "fund_code": "001618",
+                "start_date": "159998",
+                "end_date": "天弘中证计算机ETF",
+                "fund_managers": "指数型-股票",
+                "term": "2025-07-19",
+                "management_return": "至今",
+                "management_rank": "90天"
+            }
+        ],
+        "risk_metrics": {
+            "error": "风险参数计算失败"
+        }
+    },
+    {
+        "fund_code": "001665",
+        "fund_details": [
+            {
+                "业绩比较基准": "沪深300指数收益率×40%+中证全债指数收益率×60%",
+                "份额规模": "0.1199亿份（截止至：2025年06月30日）",
+                "发行日期": "2015年11月11日",
+                "基金代码": "001665（前端）",
+                "基金全称": "平安鑫安混合型证券投资基金",
+                "基金托管人": "中国银行",
+                "基金简称": "平安鑫安混合C",
+                "基金管理人": "平安基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "林清源",
+                "夏普比率(近近1年)": 2.05,
+                "夏普比率(近近2年)": 0.8,
+                "夏普比率(近近3年)": 0.57,
+                "成立日期/规模": "2015年12月11日 / 3.946亿份",
                 "成立来分红": "每份累计0.00元（0次）",
                 "托管费率": "0.10%（每年）",
                 "最高申购费率": "0.00%（前端）",
                 "最高认购费率": "0.00%（前端）",
                 "最高赎回费率": "1.50%（前端）",
-                "管理费率": "0.30%（每年）",
-                "资产规模": "0.40亿元（截止至：2025年06月30日）",
+                "管理费率": "0.60%（每年）",
+                "资产规模": "0.15亿元（截止至：2025年06月30日）",
                 "跟踪标的": "该基金无跟踪标的",
                 "销售服务费率": "0.40%（每年）"
             }
         ],
-        "fund_holdings": [],
-        "fund_managers": [
+        "fund_holdings": [
             {
-                "fund_code": "000077",
-                "start_date": "019221",
-                "end_date": "工银瑞享纯债债券D",
-                "fund_managers": "债券型-混合一级",
-                "term": "2023-09-05",
-                "management_return": "至今",
-                "management_rank": "2年又42天"
+                "stock_code": "002463",
+                "stock_name": "沪电股份",
+                "proportion": 8.95,
+                "shares": 10.35,
+                "value": 440.75
             },
             {
-                "fund_code": "000077",
-                "start_date": "016901",
-                "end_date": "工银四季收益债券C",
-                "fund_managers": "债券型-混合一级",
-                "term": "2022-10-25",
-                "management_return": "至今",
-                "management_rank": "2年又357天"
+                "stock_code": "688018",
+                "stock_name": "乐鑫科技",
+                "proportion": 8.54,
+                "shares": 2.88,
+                "value": 420.72
             },
             {
-                "fund_code": "000077",
-                "start_date": "013588",
-                "end_date": "工银稳健瑞盈一年持有债券A",
-                "fund_managers": "债券型-混合二级",
-                "term": "2021-10-26",
-                "management_return": "2024-04-17",
-                "management_rank": "2年又174天"
+                "stock_code": "300153",
+                "stock_name": "科泰电源",
+                "proportion": 8.42,
+                "shares": 12.25,
+                "value": 414.66
             },
             {
-                "fund_code": "000077",
-                "start_date": "013589",
-                "end_date": "工银稳健瑞盈一年持有债券C",
-                "fund_managers": "债券型-混合二级",
-                "term": "2021-10-26",
-                "management_return": "2024-04-17",
-                "management_rank": "2年又174天"
+                "stock_code": "603308",
+                "stock_name": "应流股份",
+                "proportion": 8.21,
+                "shares": 17.53,
+                "value": 404.59
             },
             {
-                "fund_code": "000077",
-                "start_date": "011091",
-                "end_date": "工银双玺6个月持有期债券A",
-                "fund_managers": "债券型-混合二级",
-                "term": "2021-06-11",
-                "management_return": "至今",
-                "management_rank": "4年又128天"
+                "stock_code": "688608",
+                "stock_name": "恒玄科技",
+                "proportion": 7.21,
+                "shares": 1.02,
+                "value": 355.39
             },
             {
-                "fund_code": "000077",
-                "start_date": "011092",
-                "end_date": "工银双玺6个月持有期债券C",
-                "fund_managers": "债券型-混合二级",
-                "term": "2021-06-11",
-                "management_return": "至今",
-                "management_rank": "4年又128天"
+                "stock_code": "688049",
+                "stock_name": "炬芯科技",
+                "proportion": 7.09,
+                "shares": 5.77,
+                "value": 349.1
             },
             {
-                "fund_code": "000077",
-                "start_date": "011387",
-                "end_date": "工银宁瑞6个月持有期混合A",
-                "fund_managers": "混合型-偏债",
-                "term": "2021-05-18",
-                "management_return": "至今",
-                "management_rank": "4年又152天"
+                "stock_code": "688392",
+                "stock_name": "骄成超声",
+                "proportion": 6.58,
+                "shares": 4.76,
+                "value": 323.98
             },
             {
-                "fund_code": "000077",
-                "start_date": "011388",
-                "end_date": "工银宁瑞6个月持有期混合C",
-                "fund_managers": "混合型-偏债",
-                "term": "2021-05-18",
-                "management_return": "至今",
-                "management_rank": "4年又152天"
+                "stock_code": "688213",
+                "stock_name": "思特威",
+                "proportion": 5.08,
+                "shares": 2.45,
+                "value": 250.42
             },
             {
-                "fund_code": "000077",
-                "start_date": "010068",
-                "end_date": "工银双盈债券A",
-                "fund_managers": "债券型-混合二级",
-                "term": "2020-12-09",
-                "management_return": "2024-04-17",
-                "management_rank": "3年又130天"
+                "stock_code": "688239",
+                "stock_name": "航宇科技",
+                "proportion": 4.91,
+                "shares": 6.91,
+                "value": 241.69
             },
             {
-                "fund_code": "000077",
-                "start_date": "010069",
-                "end_date": "工银双盈债券C",
-                "fund_managers": "债券型-混合二级",
-                "term": "2020-12-09",
-                "management_return": "2024-04-17",
-                "management_rank": "3年又130天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "009257",
-                "end_date": "工银尊利中短债债券F",
-                "fund_managers": "债券型-中短债",
-                "term": "2020-04-07",
-                "management_return": "2020-12-14",
-                "management_rank": "251天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "006738",
-                "end_date": "工银瑞信添慧债券A",
-                "fund_managers": "债券型-混合二级",
-                "term": "2019-06-11",
-                "management_return": "2020-12-30",
-                "management_rank": "1年又203天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "006739",
-                "end_date": "工银瑞信添慧债券C",
-                "fund_managers": "债券型-混合二级",
-                "term": "2019-06-11",
-                "management_return": "2020-12-30",
-                "management_rank": "1年又203天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "006740",
-                "end_date": "工银尊利中短债债券A",
-                "fund_managers": "债券型-中短债",
-                "term": "2019-04-30",
-                "management_return": "2020-12-14",
-                "management_rank": "1年又229天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "006741",
-                "end_date": "工银尊利中短债债券C",
-                "fund_managers": "债券型-中短债",
-                "term": "2019-04-30",
-                "management_return": "2020-12-14",
-                "management_rank": "1年又229天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "001722",
-                "end_date": "工银银和利混合",
-                "fund_managers": "混合型-偏债",
-                "term": "2018-07-27",
-                "management_return": "2020-06-11",
-                "management_rank": "1年又320天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "006004",
-                "end_date": "工银添祥一年定开债券",
-                "fund_managers": "债券型-混合二级",
-                "term": "2018-07-25",
-                "management_return": "2024-05-29",
-                "management_rank": "5年又310天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "002997",
-                "end_date": "工银瑞享纯债债券A",
-                "fund_managers": "债券型-混合一级",
-                "term": "2016-09-12",
-                "management_return": "至今",
-                "management_rank": "9年又36天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "002233",
-                "end_date": "工银丰收回报灵活配置混合C",
-                "fund_managers": "混合型-灵活",
-                "term": "2015-12-03",
-                "management_return": "2024-05-15",
-                "management_rank": "8年又166天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "001650",
-                "end_date": "工银丰收回报灵活配置混合A",
-                "fund_managers": "混合型-灵活",
-                "term": "2015-10-27",
-                "management_return": "2024-05-15",
-                "management_rank": "8年又203天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "000078",
-                "end_date": "工银信用纯债三个月定开债A",
-                "fund_managers": "债券型-长债",
-                "term": "2013-06-24",
-                "management_return": "2018-02-23",
-                "management_rank": "4年又245天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "000079",
-                "end_date": "工银信用纯债三个月定开债C",
-                "fund_managers": "债券型-长债",
-                "term": "2013-06-24",
-                "management_return": "2018-02-23",
-                "management_rank": "4年又245天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "000074",
-                "end_date": "工银信用纯债一年定开债A",
-                "fund_managers": "债券型-长债",
-                "term": "2013-05-22",
-                "management_return": "至今",
-                "management_rank": "12年又150天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "000077",
-                "end_date": "工银信用纯债一年定开债C",
-                "fund_managers": "债券型-长债",
-                "term": "2013-05-22",
-                "management_return": "至今",
-                "management_rank": "12年又150天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "000045",
-                "end_date": "工银产业债债券A",
-                "fund_managers": "债券型-混合二级",
-                "term": "2013-03-29",
-                "management_return": "至今",
-                "management_rank": "12年又204天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "000046",
-                "end_date": "工银产业债债券B",
-                "fund_managers": "债券型-混合二级",
-                "term": "2013-03-29",
-                "management_return": "至今",
-                "management_rank": "12年又204天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "485019",
-                "end_date": "工银信用纯债债券B",
-                "fund_managers": "债券型-长债",
-                "term": "2012-11-14",
-                "management_return": "2020-01-09",
-                "management_rank": "7年又57天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "485119",
-                "end_date": "工银信用纯债债券A",
-                "fund_managers": "债券型-长债",
-                "term": "2012-11-14",
-                "management_return": "2020-01-09",
-                "management_rank": "7年又57天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "487016",
-                "end_date": "工银瑞信灵活配置混合A",
-                "fund_managers": "混合型-灵活",
-                "term": "2011-12-27",
-                "management_return": "2015-01-19",
-                "management_rank": "3年又24天"
-            },
-            {
-                "fund_code": "000077",
-                "start_date": "164808",
-                "end_date": "工银四季收益债券A",
-                "fund_managers": "债券型-混合一级",
-                "term": "2011-02-10",
-                "management_return": "至今",
-                "management_rank": "14年又252天"
+                "stock_code": "603337",
+                "stock_name": "杰克股份",
+                "proportion": 4.76,
+                "shares": 6.53,
+                "value": 234.3
             }
         ],
+        "fund_managers": [],
         "risk_metrics": {
             "error": "风险参数计算失败"
         }
     },
     {
-        "fund_code": "000079",
+        "fund_code": "001770",
+        "fund_details": [],
+        "fund_holdings": [
+            {
+                "stock_code": "603119",
+                "stock_name": "浙江荣泰",
+                "proportion": 8.16,
+                "shares": 370.64,
+                "value": 17138.21
+            },
+            {
+                "stock_code": "301550",
+                "stock_name": "斯菱股份",
+                "proportion": 7.28,
+                "shares": 171.05,
+                "value": 15273.01
+            },
+            {
+                "stock_code": "603009",
+                "stock_name": "北特科技",
+                "proportion": 7.13,
+                "shares": 359.02,
+                "value": 14971.13
+            },
+            {
+                "stock_code": "603809",
+                "stock_name": "豪能股份",
+                "proportion": 6.54,
+                "shares": 897.61,
+                "value": 13733.43
+            },
+            {
+                "stock_code": "603166",
+                "stock_name": "福达股份",
+                "proportion": 5.88,
+                "shares": 797.82,
+                "value": 12342.28
+            },
+            {
+                "stock_code": "600592",
+                "stock_name": "龙溪股份",
+                "proportion": 5.57,
+                "shares": 483.83,
+                "value": 11684.5
+            },
+            {
+                "stock_code": "603319",
+                "stock_name": "美湖股份",
+                "proportion": 5.44,
+                "shares": 322.36,
+                "value": 11417.92
+            },
+            {
+                "stock_code": "300680",
+                "stock_name": "隆盛科技",
+                "proportion": 4.1,
+                "shares": 227.2,
+                "value": 8613.1
+            },
+            {
+                "stock_code": "002965",
+                "stock_name": "祥鑫科技",
+                "proportion": 4.08,
+                "shares": 218.19,
+                "value": 8557.33
+            },
+            {
+                "stock_code": "002765",
+                "stock_name": "蓝黛科技",
+                "proportion": 4.01,
+                "shares": 628.62,
+                "value": 8417.22
+            }
+        ],
+        "fund_managers": [],
+        "risk_metrics": {
+            "error": "风险参数计算失败"
+        }
+    },
+    {
+        "fund_code": "001998",
+        "fund_details": [
+            {
+                "业绩比较基准": "45%×一年期人民币定期存款基准利率(税后)+40%×中证800指数收益率+15%×恒生指数收益率(经汇率调整)",
+                "份额规模": "0.2347亿份（截止至：2025年06月30日）",
+                "发行日期": "2016年08月31日",
+                "基金代码": "001998（前端）",
+                "基金全称": "工银瑞信新焦点灵活配置混合型证券投资基金",
+                "基金托管人": "招商银行",
+                "基金简称": "工银新焦点混合C",
+                "基金管理人": "工银瑞信基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "李劭钊",
+                "夏普比率(近近1年)": 2.08,
+                "夏普比率(近近2年)": 0.96,
+                "夏普比率(近近3年)": 0.47,
+                "成立日期/规模": "2016年10月10日 / 6.464亿份",
+                "成立来分红": "每份累计0.00元（0次）",
+                "托管费率": "0.20%（每年）",
+                "最高申购费率": "0.00%（前端）",
+                "最高认购费率": "0.00%（前端）",
+                "最高赎回费率": "1.50%（前端）",
+                "管理费率": "1.00%（每年）",
+                "资产规模": "0.49亿元（截止至：2025年06月30日）",
+                "跟踪标的": "该基金无跟踪标的",
+                "销售服务费率": "0.60%（每年）"
+            }
+        ],
+        "fund_holdings": [
+            {
+                "stock_code": "00981",
+                "stock_name": "中芯国际",
+                "proportion": 9.25,
+                "shares": 24.19,
+                "value": 985.78
+            },
+            {
+                "stock_code": "00700",
+                "stock_name": "腾讯控股",
+                "proportion": 6.67,
+                "shares": 1.55,
+                "value": 711.0
+            },
+            {
+                "stock_code": "688041",
+                "stock_name": "海光信息",
+                "proportion": 5.83,
+                "shares": 4.4,
+                "value": 621.34
+            },
+            {
+                "stock_code": "002371",
+                "stock_name": "北方华创",
+                "proportion": 5.81,
+                "shares": 1.4,
+                "value": 619.09
+            },
+            {
+                "stock_code": "688037",
+                "stock_name": "芯源微",
+                "proportion": 5.58,
+                "shares": 5.55,
+                "value": 594.45
+            },
+            {
+                "stock_code": "002475",
+                "stock_name": "立讯精密",
+                "proportion": 5.53,
+                "shares": 17.0,
+                "value": 589.73
+            },
+            {
+                "stock_code": "00268",
+                "stock_name": "金蝶国际",
+                "proportion": 5.47,
+                "shares": 41.4,
+                "value": 582.91
+            },
+            {
+                "stock_code": "300679",
+                "stock_name": "电连技术",
+                "proportion": 4.95,
+                "shares": 11.63,
+                "value": 527.77
+            },
+            {
+                "stock_code": "688200",
+                "stock_name": "华峰测控",
+                "proportion": 4.49,
+                "shares": 3.32,
+                "value": 478.38
+            },
+            {
+                "stock_code": "002138",
+                "stock_name": "顺络电子",
+                "proportion": 4.14,
+                "shares": 15.68,
+                "value": 440.92
+            }
+        ],
+        "fund_managers": [],
+        "risk_metrics": {
+            "error": "风险参数计算失败"
+        }
+    },
+    {
+        "fund_code": "002036",
+        "fund_details": [],
+        "fund_holdings": [
+            {
+                "stock_code": "600519",
+                "stock_name": "贵州茅台",
+                "proportion": 9.8,
+                "shares": 7.7,
+                "value": 10853.3
+            },
+            {
+                "stock_code": "300750",
+                "stock_name": "宁德时代",
+                "proportion": 9.79,
+                "shares": 43.0,
+                "value": 10845.46
+            },
+            {
+                "stock_code": "601899",
+                "stock_name": "紫金矿业",
+                "proportion": 9.68,
+                "shares": 550.0,
+                "value": 10725.0
+            },
+            {
+                "stock_code": "000858",
+                "stock_name": "五粮液",
+                "proportion": 9.34,
+                "shares": 87.0,
+                "value": 10344.3
+            },
+            {
+                "stock_code": "603993",
+                "stock_name": "洛阳钼业",
+                "proportion": 5.78,
+                "shares": 760.0,
+                "value": 6399.2
+            },
+            {
+                "stock_code": "300760",
+                "stock_name": "迈瑞医疗",
+                "proportion": 5.38,
+                "shares": 26.5,
+                "value": 5955.88
+            },
+            {
+                "stock_code": "603259",
+                "stock_name": "药明康德",
+                "proportion": 4.71,
+                "shares": 75.0,
+                "value": 5216.25
+            },
+            {
+                "stock_code": "600809",
+                "stock_name": "山西汾酒",
+                "proportion": 4.46,
+                "shares": 28.0,
+                "value": 4938.92
+            },
+            {
+                "stock_code": "002463",
+                "stock_name": "沪电股份",
+                "proportion": 4.04,
+                "shares": 105.0,
+                "value": 4470.9
+            },
+            {
+                "stock_code": "600276",
+                "stock_name": "恒瑞医药",
+                "proportion": 3.75,
+                "shares": 80.0,
+                "value": 4152.0
+            }
+        ],
+        "fund_managers": [],
+        "risk_metrics": {
+            "error": "风险参数计算失败"
+        }
+    },
+    {
+        "fund_code": "002051",
+        "fund_details": [
+            {
+                "业绩比较基准": "沪深300指数收益率×60%+中证全债指数收益率×40%",
+                "份额规模": "3.1658亿份（截止至：2025年06月30日）",
+                "发行日期": "2015年06月04日",
+                "基金代码": "002051（前端）",
+                "基金全称": "诺安创新驱动灵活配置混合型证券投资基金",
+                "基金托管人": "工商银行",
+                "基金简称": "诺安创新驱动混合C",
+                "基金管理人": "诺安基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "左少逸",
+                "夏普比率(近近1年)": 1.28,
+                "夏普比率(近近2年)": 0.64,
+                "夏普比率(近近3年)": 0.4,
+                "成立日期/规模": "2015年11月18日 / --",
+                "成立来分红": "每份累计0.12元（4次）",
+                "托管费率": "0.20%（每年）",
+                "最高认购费率": "0.00%（前端）",
+                "管理费率": "0.60%（每年）",
+                "资产规模": "3.37亿元（截止至：2025年06月30日）",
+                "跟踪标的": "该基金无跟踪标的",
+                "销售服务费率": "0.10%（每年）"
+            }
+        ],
+        "fund_holdings": [
+            {
+                "stock_code": "301339",
+                "stock_name": "通行宝",
+                "proportion": 7.83,
+                "shares": 251.68,
+                "value": 4311.21
+            },
+            {
+                "stock_code": "688692",
+                "stock_name": "达梦数据",
+                "proportion": 6.7,
+                "shares": 16.54,
+                "value": 3687.49
+            },
+            {
+                "stock_code": "600536",
+                "stock_name": "中国软件",
+                "proportion": 5.54,
+                "shares": 65.17,
+                "value": 3048.14
+            },
+            {
+                "stock_code": "000066",
+                "stock_name": "中国长城",
+                "proportion": 5.52,
+                "shares": 205.47,
+                "value": 3040.96
+            },
+            {
+                "stock_code": "002970",
+                "stock_name": "锐明技术",
+                "proportion": 5.41,
+                "shares": 60.23,
+                "value": 2975.58
+            },
+            {
+                "stock_code": "688361",
+                "stock_name": "中科飞测",
+                "proportion": 5.24,
+                "shares": 34.25,
+                "value": 2883.83
+            },
+            {
+                "stock_code": "603108",
+                "stock_name": "润达医疗",
+                "proportion": 5.2,
+                "shares": 162.12,
+                "value": 2863.04
+            },
+            {
+                "stock_code": "002373",
+                "stock_name": "千方科技",
+                "proportion": 5.14,
+                "shares": 304.42,
+                "value": 2831.11
+            },
+            {
+                "stock_code": "688213",
+                "stock_name": "思特威",
+                "proportion": 4.93,
+                "shares": 26.56,
+                "value": 2714.48
+            },
+            {
+                "stock_code": "301171",
+                "stock_name": "易点天下",
+                "proportion": 4.71,
+                "shares": 97.03,
+                "value": 2593.61
+            }
+        ],
+        "fund_managers": [],
+        "risk_metrics": {
+            "error": "风险参数计算失败"
+        }
+    },
+    {
+        "fund_code": "002052",
+        "fund_details": [
+            {
+                "业绩比较基准": "沪深300指数*60%+中证全债指数*40%",
+                "份额规模": "3.2009亿份（截止至：2025年06月30日）",
+                "发行日期": "2014年08月13日",
+                "基金代码": "002052（前端）",
+                "基金全称": "诺安稳健回报灵活配置混合型证券投资基金",
+                "基金托管人": "工商银行",
+                "基金简称": "诺安稳健回报混合C",
+                "基金管理人": "诺安基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "邓心怡",
+                "夏普比率(近近1年)": 2.87,
+                "夏普比率(近近2年)": 1.12,
+                "夏普比率(近近3年)": 0.4,
+                "成立日期/规模": "2015年11月18日 / --",
+                "成立来分红": "每份累计0.17元（4次）",
+                "托管费率": "0.20%（每年）",
+                "最高认购费率": "---（前端）",
+                "管理费率": "0.60%（每年）",
+                "资产规模": "4.60亿元（截止至：2025年06月30日）",
+                "跟踪标的": "该基金无跟踪标的",
+                "销售服务费率": "0.10%（每年）"
+            }
+        ],
+        "fund_holdings": [
+            {
+                "stock_code": "300364",
+                "stock_name": "中文在线",
+                "proportion": 7.96,
+                "shares": 188.22,
+                "value": 4987.83
+            },
+            {
+                "stock_code": "688981",
+                "stock_name": "中芯国际",
+                "proportion": 5.56,
+                "shares": 39.51,
+                "value": 3483.43
+            },
+            {
+                "stock_code": "688521",
+                "stock_name": "芯原股份",
+                "proportion": 5.52,
+                "shares": 35.84,
+                "value": 3458.15
+            },
+            {
+                "stock_code": "300308",
+                "stock_name": "中际旭创",
+                "proportion": 4.69,
+                "shares": 20.16,
+                "value": 2940.84
+            },
+            {
+                "stock_code": "688365",
+                "stock_name": "光云科技",
+                "proportion": 4.65,
+                "shares": 191.58,
+                "value": 2915.89
+            },
+            {
+                "stock_code": "300378",
+                "stock_name": "鼎捷数智",
+                "proportion": 4.29,
+                "shares": 73.44,
+                "value": 2687.9
+            },
+            {
+                "stock_code": "688498",
+                "stock_name": "源杰科技",
+                "proportion": 4.06,
+                "shares": 13.05,
+                "value": 2544.24
+            },
+            {
+                "stock_code": "300687",
+                "stock_name": "赛意信息",
+                "proportion": 4.01,
+                "shares": 90.52,
+                "value": 2514.65
+            },
+            {
+                "stock_code": "000892",
+                "stock_name": "欢瑞世纪",
+                "proportion": 3.74,
+                "shares": 483.67,
+                "value": 2340.96
+            },
+            {
+                "stock_code": "688361",
+                "stock_name": "中科飞测",
+                "proportion": 3.63,
+                "shares": 27.01,
+                "value": 2273.69
+            }
+        ],
+        "fund_managers": [],
+        "risk_metrics": {
+            "error": "风险参数计算失败"
+        }
+    },
+    {
+        "fund_code": "002096",
+        "fund_details": [
+            {
+                "业绩比较基准": "沪深300指数收益率×50%+中证综合债指数收益率×50%",
+                "份额规模": "2.4149亿份（截止至：2025年06月30日）",
+                "发行日期": "2016年01月27日",
+                "基金代码": "002096（前端）",
+                "基金全称": "博时新收益灵活配置混合型证券投资基金",
+                "基金托管人": "招商银行",
+                "基金简称": "博时新收益C",
+                "基金管理人": "博时基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "过钧",
+                "夏普比率(近近1年)": 2.75,
+                "夏普比率(近近2年)": 1.15,
+                "夏普比率(近近3年)": 0.48,
+                "成立日期/规模": "2016年02月04日 / 5.018亿份",
+                "成立来分红": "每份累计0.74元（18次）",
+                "托管费率": "0.15%（每年）",
+                "最高认购费率": "0.60%（前端）",
+                "管理费率": "0.50%（每年）",
+                "资产规模": "2.92亿元（截止至：2025年06月30日）",
+                "跟踪标的": "该基金无跟踪标的",
+                "销售服务费率": "0.10%（每年）"
+            }
+        ],
+        "fund_holdings": [
+            {
+                "stock_code": "601899",
+                "stock_name": "紫金矿业",
+                "proportion": 8.74,
+                "shares": 229.63,
+                "value": 4477.79
+            },
+            {
+                "stock_code": "301392",
+                "stock_name": "汇成真空",
+                "proportion": 8.37,
+                "shares": 36.0,
+                "value": 4291.79
+            },
+            {
+                "stock_code": "002026",
+                "stock_name": "山东威达",
+                "proportion": 7.61,
+                "shares": 321.0,
+                "value": 3900.15
+            },
+            {
+                "stock_code": "603606",
+                "stock_name": "东方电缆",
+                "proportion": 6.9,
+                "shares": 68.4,
+                "value": 3536.96
+            },
+            {
+                "stock_code": "688502",
+                "stock_name": "茂莱光学",
+                "proportion": 6.85,
+                "shares": 12.2,
+                "value": 3509.45
+            },
+            {
+                "stock_code": "301155",
+                "stock_name": "海力风电",
+                "proportion": 5.88,
+                "shares": 41.91,
+                "value": 3013.33
+            },
+            {
+                "stock_code": "600522",
+                "stock_name": "中天科技",
+                "proportion": 5.64,
+                "shares": 200.0,
+                "value": 2892.0
+            },
+            {
+                "stock_code": "688981",
+                "stock_name": "中芯国际",
+                "proportion": 5.54,
+                "shares": 32.2,
+                "value": 2839.07
+            },
+            {
+                "stock_code": "603993",
+                "stock_name": "洛阳钼业",
+                "proportion": 4.68,
+                "shares": 285.0,
+                "value": 2399.7
+            },
+            {
+                "stock_code": "000408",
+                "stock_name": "藏格矿业",
+                "proportion": 4.31,
+                "shares": 51.81,
+                "value": 2210.73
+            }
+        ],
+        "fund_managers": [],
+        "risk_metrics": {
+            "error": "风险参数计算失败"
+        }
+    },
+    {
+        "fund_code": "002112",
+        "fund_details": [
+            {
+                "业绩比较基准": "一年期银行定期存款利率(税后)",
+                "份额规模": "4.7602亿份（截止至：2025年06月30日）",
+                "发行日期": "2015年06月08日",
+                "基金代码": "002112（前端）",
+                "基金全称": "德邦鑫星价值灵活配置混合型证券投资基金",
+                "基金托管人": "交通银行",
+                "基金简称": "德邦鑫星价值灵活配置混合C",
+                "基金管理人": "德邦基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "雷涛、陆阳",
+                "夏普比率(近近1年)": 2.48,
+                "夏普比率(近近2年)": 1.37,
+                "夏普比率(近近3年)": 0.88,
+                "成立日期/规模": "2015年11月16日 / --",
+                "成立来分红": "每份累计0.15元（5次）",
+                "托管费率": "0.15%（每年）",
+                "最高申购费率": "0.00%（前端）",
+                "最高认购费率": "---（前端）",
+                "最高赎回费率": "1.50%（前端）",
+                "管理费率": "0.70%（每年）",
+                "资产规模": "8.28亿元（截止至：2025年06月30日）",
+                "跟踪标的": "该基金无跟踪标的",
+                "销售服务费率": "0.10%（每年）"
+            }
+        ],
+        "fund_holdings": [
+            {
+                "stock_code": "300476",
+                "stock_name": "胜宏科技",
+                "proportion": 9.36,
+                "shares": 65.0,
+                "value": 8734.7
+            },
+            {
+                "stock_code": "300548",
+                "stock_name": "长芯博创",
+                "proportion": 9.3,
+                "shares": 130.0,
+                "value": 8680.1
+            },
+            {
+                "stock_code": "300570",
+                "stock_name": "太辰光",
+                "proportion": 8.91,
+                "shares": 86.24,
+                "value": 8311.81
+            },
+            {
+                "stock_code": "002463",
+                "stock_name": "沪电股份",
+                "proportion": 7.86,
+                "shares": 172.37,
+                "value": 7339.51
+            },
+            {
+                "stock_code": "688183",
+                "stock_name": "生益电子",
+                "proportion": 6.28,
+                "shares": 114.41,
+                "value": 5857.73
+            },
+            {
+                "stock_code": "300502",
+                "stock_name": "新易盛",
+                "proportion": 5.59,
+                "shares": 41.04,
+                "value": 5212.9
+            },
+            {
+                "stock_code": "688205",
+                "stock_name": "德科立",
+                "proportion": 4.82,
+                "shares": 71.8,
+                "value": 4501.01
+            },
+            {
+                "stock_code": "688498",
+                "stock_name": "源杰科技",
+                "proportion": 4.78,
+                "shares": 22.89,
+                "value": 4463.43
+            },
+            {
+                "stock_code": "000988",
+                "stock_name": "华工科技",
+                "proportion": 4.45,
+                "shares": 88.39,
+                "value": 4155.21
+            },
+            {
+                "stock_code": "688195",
+                "stock_name": "腾景科技",
+                "proportion": 4.23,
+                "shares": 87.64,
+                "value": 3943.64
+            }
+        ],
+        "fund_managers": [],
+        "risk_metrics": {
+            "error": "风险参数计算失败"
+        }
+    },
+    {
+        "fund_code": "002157",
         "fund_details": {},
-        "fund_holdings": [],
+        "fund_holdings": [
+            {
+                "stock_code": "603786",
+                "stock_name": "科博达",
+                "proportion": 4.93,
+                "shares": 9.6,
+                "value": 531.94
+            },
+            {
+                "stock_code": "601899",
+                "stock_name": "紫金矿业",
+                "proportion": 4.88,
+                "shares": 26.97,
+                "value": 525.92
+            },
+            {
+                "stock_code": "688047",
+                "stock_name": "龙芯中科",
+                "proportion": 4.85,
+                "shares": 3.93,
+                "value": 523.62
+            },
+            {
+                "stock_code": "688256",
+                "stock_name": "寒武纪",
+                "proportion": 4.0,
+                "shares": 0.72,
+                "value": 431.1
+            },
+            {
+                "stock_code": "603596",
+                "stock_name": "伯特利",
+                "proportion": 3.53,
+                "shares": 7.23,
+                "value": 381.16
+            },
+            {
+                "stock_code": "000725",
+                "stock_name": "京东方A",
+                "proportion": 3.23,
+                "shares": 87.41,
+                "value": 348.77
+            },
+            {
+                "stock_code": "603712",
+                "stock_name": "七一二",
+                "proportion": 2.74,
+                "shares": 14.07,
+                "value": 295.61
+            },
+            {
+                "stock_code": "600183",
+                "stock_name": "生益科技",
+                "proportion": 2.72,
+                "shares": 9.74,
+                "value": 293.66
+            },
+            {
+                "stock_code": "605123",
+                "stock_name": "派克新材",
+                "proportion": 2.67,
+                "shares": 3.7,
+                "value": 288.23
+            },
+            {
+                "stock_code": "688122",
+                "stock_name": "西部超导",
+                "proportion": 2.41,
+                "shares": 5.0,
+                "value": 259.52
+            }
+        ],
+        "fund_managers": [],
+        "risk_metrics": {
+            "error": "风险参数计算失败"
+        }
+    },
+    {
+        "fund_code": "002158",
+        "fund_details": [],
+        "fund_holdings": [
+            {
+                "stock_code": "300014",
+                "stock_name": "亿纬锂能",
+                "proportion": 5.01,
+                "shares": 7.29,
+                "value": 333.95
+            },
+            {
+                "stock_code": "601138",
+                "stock_name": "工业富联",
+                "proportion": 4.12,
+                "shares": 12.83,
+                "value": 274.31
+            },
+            {
+                "stock_code": "600031",
+                "stock_name": "三一重工",
+                "proportion": 3.49,
+                "shares": 12.96,
+                "value": 232.63
+            },
+            {
+                "stock_code": "603871",
+                "stock_name": "嘉友国际",
+                "proportion": 3.23,
+                "shares": 19.99,
+                "value": 214.91
+            },
+            {
+                "stock_code": "603218",
+                "stock_name": "日月股份",
+                "proportion": 3.1,
+                "shares": 16.3,
+                "value": 206.85
+            },
+            {
+                "stock_code": "601567",
+                "stock_name": "三星医疗",
+                "proportion": 3.1,
+                "shares": 9.21,
+                "value": 206.49
+            },
+            {
+                "stock_code": "300633",
+                "stock_name": "开立医疗",
+                "proportion": 2.91,
+                "shares": 6.53,
+                "value": 194.07
+            },
+            {
+                "stock_code": "601100",
+                "stock_name": "恒立液压",
+                "proportion": 2.67,
+                "shares": 2.47,
+                "value": 177.84
+            },
+            {
+                "stock_code": "002463",
+                "stock_name": "沪电股份",
+                "proportion": 2.61,
+                "shares": 4.08,
+                "value": 173.73
+            },
+            {
+                "stock_code": "603766",
+                "stock_name": "隆鑫通用",
+                "proportion": 2.56,
+                "shares": 13.37,
+                "value": 170.6
+            }
+        ],
+        "fund_managers": [],
+        "risk_metrics": {
+            "error": "风险参数计算失败"
+        }
+    },
+    {
+        "fund_code": "002163",
+        "fund_details": [
+            {
+                "业绩比较基准": "沪深300指数收益率×45%+中债总指数收益率×55%",
+                "份额规模": "0.7144亿份（截止至：2025年06月30日）",
+                "发行日期": "2015年11月18日",
+                "基金代码": "002163（前端）",
+                "基金全称": "东方惠新灵活配置混合型证券投资基金",
+                "基金托管人": "建设银行",
+                "基金简称": "东方惠新灵活配置混合C",
+                "基金管理人": "东方基金",
+                "基金类型": "混合型-灵活",
+                "基金经理人": "严凯",
+                "夏普比率(近近1年)": 2.04,
+                "夏普比率(近近2年)": 1.2,
+                "夏普比率(近近3年)": 0.55,
+                "成立日期/规模": "2015年11月20日 / --",
+                "成立来分红": "每份累计1.24元（4次）",
+                "托管费率": "0.20%（每年）",
+                "最高申购费率": "0.00%（前端）",
+                "最高认购费率": "---（前端）",
+                "最高赎回费率": "1.50%（前端）",
+                "管理费率": "0.70%（每年）",
+                "资产规模": "0.76亿元（截止至：2025年06月30日）",
+                "跟踪标的": "该基金无跟踪标的",
+                "销售服务费率": "0.30%（每年）"
+            }
+        ],
+        "fund_holdings": [
+            {
+                "stock_code": "688120",
+                "stock_name": "华海清科",
+                "proportion": 9.03,
+                "shares": 11.45,
+                "value": 1930.82
+            },
+            {
+                "stock_code": "002371",
+                "stock_name": "北方华创",
+                "proportion": 9.0,
+                "shares": 4.35,
+                "value": 1923.61
+            },
+            {
+                "stock_code": "688072",
+                "stock_name": "拓荆科技",
+                "proportion": 8.95,
+                "shares": 12.45,
+                "value": 1914.4
+            },
+            {
+                "stock_code": "688012",
+                "stock_name": "中微公司",
+                "proportion": 8.95,
+                "shares": 10.49,
+                "value": 1913.06
+            },
+            {
+                "stock_code": "300567",
+                "stock_name": "精测电子",
+                "proportion": 8.9,
+                "shares": 31.39,
+                "value": 1902.68
+            },
+            {
+                "stock_code": "688037",
+                "stock_name": "芯源微",
+                "proportion": 8.77,
+                "shares": 17.49,
+                "value": 1875.35
+            },
+            {
+                "stock_code": "688361",
+                "stock_name": "中科飞测",
+                "proportion": 7.13,
+                "shares": 18.11,
+                "value": 1524.44
+            },
+            {
+                "stock_code": "688596",
+                "stock_name": "正帆科技",
+                "proportion": 6.44,
+                "shares": 40.61,
+                "value": 1377.57
+            },
+            {
+                "stock_code": "688018",
+                "stock_name": "乐鑫科技",
+                "proportion": 4.3,
+                "shares": 6.29,
+                "value": 918.53
+            },
+            {
+                "stock_code": "688008",
+                "stock_name": "澜起科技",
+                "proportion": 2.75,
+                "shares": 7.17,
+                "value": 587.83
+            }
+        ],
         "fund_managers": [],
         "risk_metrics": {
             "error": "风险参数计算失败"
