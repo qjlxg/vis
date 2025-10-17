@@ -20,7 +20,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'  # 指定明确版本以确保兼容性
+          python-version: '3.10'
           
       - name: Install system dependencies
         run: |
@@ -37,8 +37,8 @@ jobs:
       - name: Commit and Push Results
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'Automated quant analysis pipeline update: Strategy Index NAV Plot'
-          file_pattern: 'plots/*.png'  # 更通用，匹配 plots/ 目录下所有PNG
+          commit_message: 'Automated quant analysis pipeline update: Signal Count Index Plot'
+          file_pattern: 'plots/*.png'
           commit_user_name: GitHub Actions Bot
           commit_user_email: actions@github.com
           branch: main
