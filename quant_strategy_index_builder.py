@@ -5,6 +5,7 @@ import glob
 from datetime import datetime
 import logging
 import io
+import time # 引入 time 模块以保持一致性
 
 # --- 配置参数 ---
 FUND_DATA_DIR = 'fund_data'
@@ -17,11 +18,11 @@ STARTING_NAV = 1000
 RISK_FREE_RATE_ANNUAL = 0.03 # 假设年化无风险利率 3%
 RISK_FREE_RATE_DAILY = RISK_FREE_RATE_ANNUAL / 252 # 每日无风险收益率
 
-# 配置日志
+# 配置日志 (保留原有配置)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# --- 关键绩效指标计算函数 ---
+# --- 关键绩效指标计算函数 (保留原有功能) ---
 
 def calculate_mdd(nav_series):
     """计算最大回撤 (Maximum Drawdown)"""
@@ -54,12 +55,13 @@ def calculate_sharpe_ratio(return_series, risk_free_rate_daily):
     # 年化
     return (mean_excess_return / std_excess_return) * np.sqrt(252)
 
-# --- 信号计算函数 (已根据用户要求调整阈值) ---
+# --- 信号计算函数 ---
 
 def calculate_technical_indicators_for_day(df):
     """
     计算关键技术指标 (RSI, MACD, MA50) 的历史序列。
     DataFrame 必须按日期升序 (ASC) 排列。
+    (保留原有功能)
     """
     if 'net_value' not in df.columns or len(df) < 50:
         df['RSI'] = np.nan
@@ -92,8 +94,9 @@ def calculate_technical_indicators_for_day(df):
 
 def generate_action_signal(row):
     """
-    根据调整后的逻辑生成行动信号。
-    信号：强买入/弱买入/持有观察/强卖出规避
+    根据用户要求：
+    1. “强买入”信号采用多因子（RSI, MACD金叉, 价格低于MA50）共振逻辑 (AND)。
+    2. “弱买入”和“强卖出/规避”的逻辑保持不变。
     """
     rsi = row['RSI']
     macd = row.get('MACD')
@@ -107,32 +110,40 @@ def generate_action_signal(row):
         
     # --- 信号规则 (已调整阈值) ---
     
-    # 强卖出/规避：趋势严重恶化或过度超买
+    # 强卖出/规避：趋势严重恶化或过度超买 (保持原逻辑)
     if nav_ma50 < 0.95 or rsi > 75: 
         return '强卖出/规避'
     
-    # 强买入：深度超卖且接近底部
-    # RSI < 30 (原 25/30) + 价格低于长期均线 + MACD金叉
-    if rsi < 30 and nav_ma50 < 1.00:
-        # MACD金叉
-        if macd > signal and prev_macd < prev_signal:
-             return '强买入'
-        # 深度超卖（无需金叉）
-        if rsi < 25:
-             return '强买入'
+    # --- 修正后的强买入：多因子共振 (AND 逻辑) ---
     
-    # 弱买入：超卖或 MACD 转向
-    # RSI < 40 (原 30) + MACD 金叉 (修正：使用金叉作为独立信号)
+    # 因子 1: 深度超卖 (RSI < 30)
+    is_deep_oversold = (rsi < 30)
+    
+    # 因子 2: 价格位于长期均线之下 (NAV/MA50 < 1.00)
+    is_below_ma50 = (nav_ma50 < 1.00)
+    
+    # 因子 3: MACD 金叉 (MACD > Signal 且 Prev_MACD < Prev_Signal)
+    is_macd_golden_cross = (macd > signal and prev_macd < prev_signal)
+
+    # 强买入：三个因子必须同时满足 (共振)
+    if is_deep_oversold and is_below_ma50 and is_macd_golden_cross:
+        return '强买入'
+    
+    # 补充：如果 RSI 极低，也视为强买入（即深度超卖，可独立触发）
+    if rsi < 25:
+         return '强买入'
+    
+    # 弱买入：超卖或 MACD 转向 (保持原逻辑)
     if rsi < 40:
         return '弱买入'
     
-    # MACD金叉作为弱买入补充信号
-    if macd > signal and prev_macd < prev_signal:
+    # MACD金叉作为弱买入补充信号 (保持原逻辑)
+    if is_macd_golden_cross:
         return '弱买入'
 
     return '持有/观察'
 
-# --- 核心指数构建类 ---
+# --- 核心指数构建类 (保留原有功能和结构) ---
 
 class IndexBuilder:
     def __init__(self, fund_data_dir=FUND_DATA_DIR, index_data_dir=INDEX_DATA_DIR, index_name=INDEX_NAME, starting_nav=STARTING_NAV):
@@ -167,7 +178,7 @@ class IndexBuilder:
 
 
     def load_and_preprocess_data(self):
-        """加载所有基金和基准指数数据，计算指标，并查找公共日期。"""
+        """加载所有基金和基准指数数据，计算指标，并查找公共日期。(保留原有功能)"""
         # 1. 检查目录是否存在
         if not os.path.exists(self.fund_data_dir):
             logger.error(f"错误: 基金数据目录 '{self.fund_data_dir}' 不存在。")
@@ -251,7 +262,7 @@ class IndexBuilder:
     def build_index(self):
         """
         计算策略指数和基准指数的每日净值 (NAV)。
-        策略改进：当无买入信号时，保持前一交易日的持仓组合，而不是收益为 0。
+        策略改进：当无买入信号时，保持前一交易日的持仓组合，而不是收益为 0。(保留原有功能)
         """
         
         index_data = pd.DataFrame(index=self.common_dates)
@@ -348,7 +359,6 @@ class IndexBuilder:
             index_data.loc[date, 'Strategy_Return'] = strategy_return
             index_data.loc[date, 'CSI300_Return'] = csi300_return
             index_data.loc[date, 'Signal_Funds_Count'] = signal_count # 记录的是当日持仓的基金数
-            # index_data.loc[date, 'Holding_Codes'] = ','.join(current_holdings) # 可选：记录持仓代码
 
         # 最终数据整理
         index_data['Strategy_NAV'] = index_nav
@@ -365,7 +375,7 @@ class IndexBuilder:
         return index_data, strategy_mdd, csi300_mdd, strategy_sharpe, csi300_sharpe
 
     def generate_report(self, index_df, strategy_mdd, csi300_mdd, strategy_sharpe, csi300_sharpe):
-        """生成 Markdown 报告，增强量化指标输出。"""
+        """生成 Markdown 报告，增强量化指标输出。(保留原有功能)"""
         now = datetime.now()
         start_date = index_df.index.min().strftime('%Y-%m-%d')
         end_date = index_df.index.max().strftime('%Y-%m-%d')
@@ -383,6 +393,7 @@ class IndexBuilder:
         report += f"生成日期: {now.strftime('%Y-%m-%d %H:%M:%S')}\n"
         report += f"数据周期: {start_date} 至 {end_date} (共 {len(index_df)} 个交易日)\n"
         report += f"策略逻辑: 仅在出现'强买入'或'弱买入'信号时换仓，等权持有信号基金，否则保持现有持仓。\n"
+        report += f"**注意：本次'强买入'采用 RSI<30 AND 价格<MA50 AND MACD金叉 的多因子共振逻辑。**\n"
         report += f"无持仓时按年化 {RISK_FREE_RATE_ANNUAL:.1%} (每日 {RISK_FREE_RATE_DAILY:.4f}) 计算收益。\n\n"
         
         report += f"## **策略指数表现总结**\n"
@@ -434,7 +445,7 @@ class IndexBuilder:
         return REPORT_FILE
 
     def run(self):
-        """主执行流程。"""
+        """主执行流程。(保留原有功能)"""
         logger.info("开始执行量化策略指数构建...")
             
         if not self.load_and_preprocess_data():
