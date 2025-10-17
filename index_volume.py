@@ -60,7 +60,7 @@ def save_to_file(df):
         return
     
     now = datetime.datetime.now()
-    year_month = now.strftime('%Y/%m')
+    year_month = now.strftime('%Y%m')  # 改为 YYYYMM 格式
     timestamp = now.strftime('%Y%m%d_%H%M%S')
     filename = f"index_volume_{timestamp}.csv"
     
