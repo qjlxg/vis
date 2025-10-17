@@ -1,39 +1,70 @@
-name: Update C-Class Fund Codes
+name: 自动获取 C 类基金代码
 
 on:
+  # 允许手动触发
+  workflow_dispatch:
+  # 定时触发（每天凌晨 00:00 运行）
   schedule:
-    - cron: '0 2 * * *'  # 每天UTC 2:00运行（北京时间10:00，避开高峰）
-  workflow_dispatch:  # 支持手动触发
+    - cron: '0 0 * * *'
+  # 当此工作流文件或 Python 脚本被推送时触发
+  push:
+    paths:
+      - '.github/workflows/fetch_c_fund_codes.yml'
+      - 'fetch_c_fund_codes.py'
 
 jobs:
-  update-fund-codes:
+  update-c-codes:
     runs-on: ubuntu-latest
-
+    
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      # 步骤 1: 检出仓库代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # 使用 GITHUB_TOKEN 确保 Actions 有权限提交
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
 
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
+      # 步骤 2: 设置 Python 环境
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install requests pandas  # 安装脚本依赖
+      # 步骤 3: 安装依赖库 (只需 pandas 和 requests)
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas requests
 
-    - name: Run fund codes script
-      run: python get_c_funds.py  # 假设脚本文件名为 get_c_funds.py
+      # 步骤 4: 执行 Python 脚本
+      - name: Run C fund code script
+        run: python fetch_c_fund_codes.py
 
-    - name: Commit and push changes
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add C0类.txt
-        git diff --staged --quiet || git commit -m "Update C-class fund codes (automated)"
-        git push
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # 使用默认Token推送
+      # 步骤 5: 配置 Git 提交身份
+      - name: Configure Git user
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-   
+      # 步骤 6: 提交和推送 C0类.txt
+      - name: Commit and Push C0类.txt
+        run: |
+          # 检查 C0类.txt 是否存在或有变化
+          if [ -f "C0类.txt" ] && ! git diff --quiet -- "C0类.txt"; then
+              echo "C0类.txt has changes, attempting to commit..."
+              
+              git add C0类.txt
+              
+              # 创建提交信息
+              git commit -m "🤖 chore: Update C fund codes (C0类.txt)"
+              
+              # *** 关键修复：拉取远程最新内容并 rebase，解决推送冲突 ***
+              git pull --rebase origin main 
+              
+              # 推送更改
+              git push
+              echo "Successfully committed and pushed C0类.txt"
+          else
+              echo "C0类.txt not found or no changes detected. Skipping commit."
+          fi
