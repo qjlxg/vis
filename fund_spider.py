@@ -29,7 +29,7 @@ MAX_CONCURRENT = 5  # 最大并发基金数量
 FORCE_UPDATE = False  # 是否强制重新抓取（忽略缓存）
 
 # 保持上次新增的限制逻辑，以便在 GitHub Actions 中控制批次
-MAX_FUNDS_PER_RUN = 1100  # 每次运行脚本最多处理的基金代码数量 (0 表示不限制)
+MAX_FUNDS_PER_RUN = 500  # 每次运行脚本最多处理的基金代码数量 (0 表示不限制)
 
 def get_all_fund_codes(file_path):
     """从 C类.txt 文件中读取基金代码（单列无标题，UTF-8 编码）"""
