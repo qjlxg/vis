@@ -18,12 +18,13 @@ RISK_FREE_RATE_FILENAME = 'risk_free_rate.csv'
 STARTING_NAV = 1000
 RISK_FREE_RATE_ANNUAL = 0.03 
 TRANSACTION_COST = 0.001  # 买卖单边成本 0.1%
+MAX_MISSING_DAYS = 20 # 【新增】最大连续缺失天数，超过则视为停牌/无效数据
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# --- 辅助函数 ---
+# --- 辅助函数 (保持不变或微调) ---
 
 def validate_data(df, filepath, required_columns=['date', 'net_value']):
     """验证DataFrame的基本完整性和数据合理性。"""
@@ -50,9 +51,7 @@ def calculate_mdd(nav_series):
     return abs(drawdown.min())
 
 def calculate_sharpe_ratio(return_series, index_df, risk_free_rate_series):
-    """
-    计算年化夏普比率，使用动态年化因子和动态无风险利率。
-    """
+    """计算年化夏普比率，使用动态年化因子和动态无风险利率。"""
     if return_series.empty or len(return_series) < 2:
         return np.nan
     
@@ -64,7 +63,6 @@ def calculate_sharpe_ratio(return_series, index_df, risk_free_rate_series):
     trading_days_per_year = total_trading_days / (time_span_days / 365.25) if time_span_days > 0 else 252 
         
     aligned_returns = daily_returns.reindex(risk_free_rate_series.index)
-    # 仅使用有数据的日期进行计算
     valid_dates = aligned_returns.index.intersection(risk_free_rate_series.index)
     aligned_returns = aligned_returns.loc[valid_dates]
     rfr_aligned = risk_free_rate_series.loc[valid_dates]
@@ -92,6 +90,7 @@ def calculate_technical_indicators_for_day(df, ma_window):
     delta = df['net_value'].diff()
     gain = delta.where(delta > 0, 0)
     loss = -delta.where(delta < 0, 0)
+    # min_periods 确保指标计算的窗口性
     avg_gain = gain.ewm(com=13, adjust=False, min_periods=14).mean()
     avg_loss = loss.ewm(com=13, adjust=False, min_periods=14).mean()
     rs = avg_gain / avg_loss
@@ -116,36 +115,35 @@ def calculate_technical_indicators_for_day(df, ma_window):
 def generate_action_signal_vectorized(df, rsi_strong_buy, rsi_weak_buy, nav_ma50_strong_sell, nav_ma50_strong_buy_max, rsi_strong_sell_max):
     """
     【完全向量化】根据多因子共振逻辑生成行动信号。
-    
-    注：Pandas布尔索引赋值是按顺序覆盖的，但为了清晰和安全，我们从最激进/最需要回避的信号开始赋值。
+    【改进】简化信号赋值逻辑，严格遵循优先级。
     """
     signals = pd.Series('持有/观察', index=df.index)
     
-    # --- 信号布尔条件 ---
-    
-    # MACD 金叉
+    # --- 基础布尔条件 ---
     is_macd_golden_cross = (df['MACD'] > df['MACD_Signal']) & (df['Prev_MACD'] < df['Prev_Signal'])
     
-    # 1. 强卖出/规避 (绝对最高优先级，覆盖所有买入)
+    # 1. 强卖出/规避 (最高优先级)
     is_strong_sell = (df['NAV_MA50'] < nav_ma50_strong_sell) | (df['RSI'] > rsi_strong_sell_max)
     signals[is_strong_sell] = '强卖出/规避'
     
-    # 2. 强买入：多因子共振 (优先级高于弱买入)
-    is_deep_oversold = (df['RSI'] < rsi_strong_buy)
-    is_below_ma = (df['NAV_MA50'] < nav_ma50_strong_buy_max)
-    is_strong_buy_combo = is_deep_oversold & is_below_ma & is_macd_golden_cross
-    is_super_strong_buy = (df['RSI'] < (rsi_strong_buy - 5)) # 例如 RSI < 25
+    # 2. 强买入 (第二优先级)
+    strong_buy_combo = (
+        (df['RSI'] < rsi_strong_buy) & 
+        (df['NAV_MA50'] < nav_ma50_strong_buy_max) & 
+        is_macd_golden_cross
+    )
+    is_super_strong_buy = (df['RSI'] < (rsi_strong_buy - 5)) 
     
-    signals[is_strong_buy_combo | is_super_strong_buy] = '强买入'
+    strong_buy_condition = strong_buy_combo | is_super_strong_buy
+    
+    # 仅对非强卖出/规避的日期赋值为 '强买入'
+    signals[(signals == '持有/观察') & strong_buy_condition] = '强买入'
 
-    # 3. 弱买入：RSI 超卖或 MACD 金叉 (不能覆盖强卖出，但可以被强买入覆盖)
-    is_weak_buy = (df['RSI'] < rsi_weak_buy) | is_macd_golden_cross
+    # 3. 弱买入 (最低优先级)
+    is_weak_buy_base = (df['RSI'] < rsi_weak_buy) | is_macd_golden_cross
     
-    # 只对目前还是 '持有/观察' 的位置赋值为 '弱买入'
-    signals.mask((signals == '持有/观察') & is_weak_buy, '弱买入', inplace=True)
-    
-    # 4. 再次确保强卖出覆盖一切（安全）：
-    signals[is_strong_sell] = '强卖出/规避'
+    # 仅对目前仍是 '持有/观察' 的位置赋值为 '弱买入'
+    signals.mask((signals == '持有/观察') & is_weak_buy_base, '弱买入', inplace=True)
 
     return signals
 
@@ -154,7 +152,7 @@ def generate_action_signal_vectorized(df, rsi_strong_buy, rsi_weak_buy, nav_ma50
 class IndexBuilder:
     def __init__(self, fund_data_dir=FUND_DATA_DIR, index_data_dir=INDEX_DATA_DIR, index_name=INDEX_NAME, starting_nav=STARTING_NAV,
                  rsi_strong_buy=30, rsi_weak_buy=40, nav_ma50_strong_sell=0.95, nav_ma50_strong_buy_max=1.00, rsi_strong_sell_max=75,
-                 ma_window=50): # 【改进】动态MA窗口
+                 ma_window=50): 
         
         self.fund_data_dir = fund_data_dir
         self.index_data_dir = index_data_dir
@@ -173,11 +171,12 @@ class IndexBuilder:
         self.nav_ma50_strong_sell = nav_ma50_strong_sell
         self.nav_ma50_strong_buy_max = nav_ma50_strong_buy_max
         self.rsi_strong_sell_max = rsi_strong_sell_max
-        self.ma_window = ma_window # 【改进】动态MA窗口
+        self.ma_window = ma_window 
+        self.max_missing_days = MAX_MISSING_DAYS # 长期缺失判断阈值
         
-        # 动态无风险利率
-        self.risk_free_rate_df = self._load_risk_free_rate()
+        # 动态无风险利率 (注意：此时 common_dates 未确定)
         self.default_risk_free_daily = RISK_FREE_RATE_ANNUAL / 252
+        self.risk_free_rate_df = self._load_risk_free_rate()
 
 
     def _load_risk_free_rate(self):
@@ -194,7 +193,6 @@ class IndexBuilder:
             df.dropna(subset=['risk_free_rate_daily', 'date'], inplace=True)
             df = df.sort_values(by='date').set_index('date')
             
-            # 【改进】鲁棒性检查：检查利率是否为正
             if (df['risk_free_rate_daily'] <= 0).any():
                 logger.error(f"❌ 动态无风险利率文件 {rfr_file} 包含无效值（负值或零）。使用固定值。")
                 return None
@@ -212,11 +210,12 @@ class IndexBuilder:
         """加载沪深300指数数据。"""
         csi300_file = os.path.join(self.index_data_dir, CSI300_FILENAME)
         if not os.path.exists(csi300_file):
+            logger.warning(f"⚠️ 未找到沪深300数据文件 '{csi300_file}'。指数对比功能将被禁用。")
             return None
         
         try:
             df = pd.read_csv(csi300_file)
-            if not validate_data(df.copy(), csi300_file): return None # 验证数据
+            if not validate_data(df.copy(), csi300_file): return None 
             df['date'] = pd.to_datetime(df['date'])
             df = df.sort_values(by='date').set_index('date')
             return df
@@ -226,7 +225,10 @@ class IndexBuilder:
 
 
     def load_and_preprocess_data(self):
-        """加载所有基金和基准指数数据，计算指标，并查找公共日期。"""
+        """
+        加载所有基金和基准指数数据，计算指标，并查找公共日期。
+        【改进】增加长期缺失数据（停牌）剔除逻辑。
+        """
         if not os.path.exists(self.fund_data_dir):
             logger.error(f"❌ 基金数据目录 '{self.fund_data_dir}' 不存在。")
             return False
@@ -244,15 +246,27 @@ class IndexBuilder:
                 df = pd.read_csv(filepath)
                 df = df.rename(columns={'net_value': 'net_value', 'date': 'date'}) 
                 
-                # 【改进】数据验证
                 if not validate_data(df.copy(), filepath):
                     continue
                     
                 df['date'] = pd.to_datetime(df['date'])
                 df = df.sort_values(by='date').set_index('date')
                 
-                # --- 数据缺失处理改进：插值和填充 ---
+                # 检查长期缺失数据 (停牌)
+                initial_na_count = df['net_value'].isna().sum()
+                # 线性插值和填充（假设短时间缺失可以插值）
                 df['net_value'] = df['net_value'].interpolate(method='linear').ffill().bfill()
+                
+                # 重新计算缺失比例和最大连续缺失天数 (注意：这里用插值前的原始数据更准确)
+                if initial_na_count > 0:
+                     # 检查原始数据是否有长期连续缺失
+                     is_na_series = pd.read_csv(filepath)['net_value'].isna()
+                     max_consecutive_na = is_na_series.rolling(window=self.max_missing_days).sum().max()
+                     missing_ratio = is_na_series.sum() / len(is_na_series)
+                     
+                     if max_consecutive_na >= self.max_missing_days or missing_ratio > 0.5:
+                         logger.warning(f"⚠️ 基金 {fund_code} 长期缺失数据（最大连缺 {max_consecutive_na} 天或缺失率 {missing_ratio:.1%}），跳过处理。")
+                         continue
                 
                 # 历史计算技术指标 (传入动态 MA 窗口)
                 df = calculate_technical_indicators_for_day(df.copy(), self.ma_window)
@@ -268,6 +282,7 @@ class IndexBuilder:
             return False
 
         # 确定公共日期范围
+        # ... (公共日期范围计算逻辑保持不变)
         full_index = all_dates_indices[0]
         for index in all_dates_indices[1:]:
             full_index = full_index.union(index)
@@ -293,17 +308,13 @@ class IndexBuilder:
              logger.error(f"❌ 警告：公共数据日期少于 {self.ma_window} 天 (找到 {len(self.common_dates)} 天)。停止构建。")
              return False
 
-        # --- 性能优化：预计算信号和收益率 ---
         self._precalculate_signals_and_returns()
         
         logger.info(f"✅ 数据预处理完成。公共日期范围: {self.common_dates.min().strftime('%Y-%m-%d')} - {self.common_dates.max().strftime('%Y-%m-%d')}")
         return True
 
     def _precalculate_signals_and_returns(self):
-        """
-        预先计算所有基金在所有 common_dates 上的行动信号和日收益率。
-        【改进】使用向量化信号函数。
-        """
+        """预先计算所有基金在所有 common_dates 上的行动信号和日收益率。"""
         signals = {}
         returns = {}
         
@@ -321,11 +332,9 @@ class IndexBuilder:
             # 2. 预计算日收益率
             returns[code] = df['net_value'].pct_change()
 
-        # 转换为 DataFrame 并对齐到公共日期
         self.signals_df = pd.DataFrame(signals).reindex(self.common_dates)
         self.returns_df = pd.DataFrame(returns).reindex(self.common_dates)
         
-        # 沪深300收益率
         if self.csi300_data is not None:
             self.csi300_returns = self.csi300_data['net_value'].pct_change().reindex(self.common_dates)
         else:
@@ -333,44 +342,33 @@ class IndexBuilder:
 
     def _calculate_turnover_ratio(self, prev_holdings_set, new_holdings_set):
         """
-        计算实际换仓比例。
-        换手率定义近似为：(需要调整的资产份额) / 总资产
-        假设等权：换手率 = (买入份额 + 卖出份额) / 总资产
-        
+        计算实际换仓比例 (Total Turnover Ratio)。
+        【改进】采用 (买入权重 + 卖出权重) 的更精细模型。
         """
-        # 如果新旧持仓完全一致，换手率为 0
-        if prev_holdings_set == new_holdings_set:
+        if not prev_holdings_set and not new_holdings_set:
             return 0.0
-            
-        # 换入换出基金总数 (需要调整的基金数)
-        total_share_to_adjust = len(prev_holdings_set.symmetric_difference(new_holdings_set))
         
-        # 总资产的归一化分母：调整前后持仓数量的最大值（因为是等权，分母代表了总资产）
-        max_holdings = max(len(prev_holdings_set), len(new_holdings_set), 1)
-        
-        # 换仓比例 (Total adjusted share / Max Holdings)
-        # 例如：prev={A,B,C}, new={A,D,E}. total_share_to_adjust=4 ({B,C,D,E}). max_holdings=3. Ratio = 4/3. (非标准)
-        
-        # 采用更直观的换手率计算：(卖出数量/旧持仓数) + (买入数量/新持仓数)
-        
-        # 需要卖出的份额 (占旧持仓的比例)
+        # 1. 计算需要卖出的权重（占旧持仓的比例）
         sell_count = len(prev_holdings_set - new_holdings_set)
-        sell_turnover = sell_count / max(len(prev_holdings_set), 1)
+        sell_weight = sell_count / max(len(prev_holdings_set), 1)
         
-        # 需要买入的份额 (占新持仓的比例)
+        # 2. 计算需要买入的权重（占新持仓的比例）
         buy_count = len(new_holdings_set - prev_holdings_set)
-        buy_turnover = buy_count / max(len(new_holdings_set), 1)
+        buy_weight = buy_count / max(len(new_holdings_set), 1)
         
-        # 实际调整的换手率：(买入份额 + 卖出份额) / 2
-        turnover_ratio = (sell_turnover + buy_turnover) / 2
+        # 总换手率：卖出 + 买入权重 (总权重变动)
+        # 例如：空仓(0) -> 满仓(5)：卖出0/0=0，买入5/5=1。换手率=1.0。正确。
+        # 满仓(5) -> 满仓(5)且换2个：卖出2/5=0.4，买入2/5=0.4。换手率=0.8。正确。
+        turnover_ratio = sell_weight + buy_weight
         
-        return turnover_ratio
+        # 限制最大换手率为 100%
+        return min(turnover_ratio, 1.0) 
 
 
     def build_index(self):
         """
         计算策略指数和基准指数的每日净值 (NAV)。
-        【改进】：使用预计算的 DataFrame，并加入动态交易成本（基于实际换仓比例）。
+        【修正】修复 AttributeError: 'NoneType' object has no attribute 'reindex'
         """
         
         index_data = pd.DataFrame(index=self.common_dates)
@@ -378,20 +376,27 @@ class IndexBuilder:
         csi300_nav = [self.starting_nav]
         current_holdings = [] # 当前持仓基金代码列表
         
-        # 动态无风险利率系列
-        rfr_series = self.risk_free_rate_df.reindex(self.common_dates).ffill().fillna(self.default_risk_free_daily)
-
+        # --- 【修复 AttributeError】 处理动态无风险利率 ---
+        if self.risk_free_rate_df is not None:
+            rfr_series = self.risk_free_rate_df.reindex(self.common_dates).ffill().fillna(self.default_risk_free_daily)
+            
+            # 【改进】日期覆盖范围检查（在 common_dates 确定后执行）
+            if not rfr_series.index.min() <= self.common_dates.min() or not rfr_series.index.max() >= self.common_dates.max():
+                 logger.warning(f"⚠️ 无风险利率数据日期覆盖不足，将使用默认值填充。")
+        else:
+            # 动态无风险利率为 None，使用默认固定值创建 Series
+            rfr_series = pd.Series(self.default_risk_free_daily, index=self.common_dates)
+            
         # 从第二个日期开始计算指数
         for i, date in enumerate(self.common_dates):
             if i == 0:
                 index_data.loc[date, 'Strategy_Return'] = 0.0
                 index_data.loc[date, 'CSI300_Return'] = 0.0
                 index_data.loc[date, 'Signal_Funds_Count'] = 0
+                index_data.loc[date, 'Turnover_Ratio'] = 0.0
                 continue
                 
             prev_date = self.common_dates[i-1]
-            
-            # 获取前一日的信号 (即换仓依据)
             prev_signals = self.signals_df.loc[prev_date]
             buy_signal_codes = prev_signals[prev_signals.isin(['强买入', '弱买入'])].index.tolist()
 
@@ -400,25 +405,23 @@ class IndexBuilder:
             
             is_rebalance = bool(buy_signal_codes) 
             
-            # 交易成本模型计算
             turnover_ratio = 0.0
             prev_holdings_set = set(current_holdings)
             new_holdings_set = set(buy_signal_codes)
             
-            if is_rebalance:
-                # 出现新信号：清仓旧持仓，买入新的信号组合 (换仓/再平衡)
+            if is_rebalance or (prev_holdings_set != new_holdings_set and prev_holdings_set and new_holdings_set):
+                # 出现新信号或持仓发生变化：计算换仓比例
                 
-                # 【改进】计算换仓比例
                 turnover_ratio = self._calculate_turnover_ratio(prev_holdings_set, new_holdings_set)
                 
                 # 更新持仓
                 current_holdings = buy_signal_codes
                 signal_count = len(current_holdings)
                 
-                # 计算当日收益：新组合的日收益率平均值
+                # 计算当日收益
                 holdings_returns = self.returns_df.loc[date, current_holdings].dropna()
                 
-                if not holdings_returns.empty:
+                if not holdings_returns.empty and len(current_holdings) > 0:
                     strategy_return = holdings_returns.mean()
                 else:
                     strategy_return = daily_rfr
@@ -430,10 +433,9 @@ class IndexBuilder:
                 # 无新信号，但有持仓：保持前日的持仓组合 (持仓等待)
                 signal_count = len(current_holdings)
                 
-                # 计算当日收益：旧组合的日收益率平均值
                 holdings_returns = self.returns_df.loc[date, current_holdings].dropna()
                         
-                if not holdings_returns.empty:
+                if not holdings_returns.empty and len(current_holdings) > 0:
                     strategy_return = holdings_returns.mean()
                 else:
                     strategy_return = daily_rfr
@@ -461,7 +463,6 @@ class IndexBuilder:
             index_data.loc[date, 'Signal_Funds_Count'] = signal_count 
             index_data.loc[date, 'Turnover_Ratio'] = turnover_ratio
 
-        # 最终数据整理
         index_data['Strategy_NAV'] = index_nav
         index_data['CSI300_NAV'] = csi300_nav
         index_data.index.name = 'Date'
@@ -491,10 +492,10 @@ class IndexBuilder:
         report += f"生成日期: {now.strftime('%Y-%m-%d %H:%M:%S')}\n"
         report += f"数据周期: {start_date} 至 {end_date} (共 {len(index_df)} 个交易日)\n"
         report += "### **策略与模型最终改进总结：**\n"
-        report += f"- **性能优化:** 信号计算已完全采用**向量化**操作 (无需 `apply` 循环)。\n"
-        report += f"- **信号逻辑:** 采用多因子共振，MA窗口调整为 **{self.ma_window}** 日。\n"
-        report += f"- **交易成本:** 每次换仓扣除 **{self.transaction_cost * 100:.2f}%** 成本，并根据**实际换仓比例**动态调整，模型更精确。\n"
-        report += "- **数据鲁棒性:** 增强了对非正净值和动态无风险利率的**验证和错误处理**。\n"
+        report += f"- **性能优化:** 信号计算已完全采用**向量化**操作，并修复了无风险利率 `NoneType` 错误。\n"
+        report += f"- **信号逻辑:** 采用多因子共振，MA窗口调整为 **{self.ma_window}** 日，**信号优先级严格化** (强卖 > 强买 > 弱买)。\n"
+        report += f"- **交易成本:** 每次换仓扣除 **{self.transaction_cost * 100:.2f}%** 成本，并根据**实际换仓比例**（买入权重+卖出权重）动态调整。\n"
+        report += f"- **数据鲁棒性:** 增强了数据验证，并剔除了有**超过 {self.max_missing_days} 天连续缺失净值**的基金。\n"
         report += f"- **无风险利率:** 采用动态无风险利率 ({'已加载动态数据' if self.risk_free_rate_df is not None else '使用固定年化 3.0%'})。\n"
         
         report += f"## **策略指数表现总结**\n"
@@ -559,7 +560,5 @@ class IndexBuilder:
 
 
 if __name__ == '__main__':
-    # 示例运行：可在此处配置不同的参数
-    # 例如：builder = IndexBuilder(ma_window=20, rsi_strong_buy=25)
     builder = IndexBuilder()
     builder.run()
