@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: |
           # 安装必要的依赖库
-          pip install pandas numpy
+          pip install pandas numpy tabulate
 
       # --- 核心步骤：量化策略指数构建 ---
       - name: Run Quant Strategy Index Builder
