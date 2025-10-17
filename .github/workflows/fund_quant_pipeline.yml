@@ -24,21 +24,19 @@ jobs:
           
       - name: Install dependencies
         run: |
-          # 安装必要的依赖库，新增 matplotlib 用于绘图
-          pip install pandas numpy tabulate matplotlib
+          # 安装必要的依赖库
+          pip install pandas numpy matplotlib
 
-      # --- 核心步骤：量化策略指数构建 (不变) ---
+      # --- 核心步骤：量化策略指数构建 ---
       - name: Run Quant Strategy Index Builder
-        run: python quant_strategy_index_builder.py
+        run: python simple_index.py
         
       - name: Commit and Push Results
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'Automated quant analysis pipeline update: Strategy Index Report'
-          # 更新文件模式：现在需要同时捕获 .md 报告和 .png 图片
-          file_pattern: |
-            **/*.md
-            **/*.png
+          commit_message: 'Automated quant analysis pipeline update: Strategy Index NAV Plot'
+          # 捕获指数曲线图文件
+          file_pattern: '**/Simple_BuySignal_Index_*.png'
           commit_user_name: GitHub Actions Bot
           commit_user_email: actions@github.com
           branch: main
