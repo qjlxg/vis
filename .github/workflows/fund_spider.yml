@@ -45,7 +45,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas requests beautifulsoup4 aiohttp lxml tenacity
       
-      # *** 新增步骤 5：设置 Git 提交身份 ***
+      # 步骤 5：设置 Git 提交身份
       - name: Configure Git user
         run: |
           git config user.name "GitHub Actions"
@@ -58,7 +58,7 @@ jobs:
         # 允许此步骤失败，但工作流继续执行，以便提交已保存的数据
         continue-on-error: true 
 
-      # 步骤 7: 提交和推送新数据 (关键修改: 强制执行提交)
+      # 步骤 7: 提交和推送新数据 (包含修复推送失败的逻辑)
       - name: Commit and Push new data
         # 无论前面步骤结果如何，都执行此步骤
         if: always()
@@ -74,6 +74,11 @@ jobs:
               if ! git diff --quiet --cached; then
                   echo "Found changes, attempting to commit..."
                   git commit -m "🤖 chore: Update fund net value data at ${{ github.event.schedule || github.event.head_commit.timestamp || 'manual run' }}"
+                  
+                  # *** 关键修复：在推送前拉取远程最新内容并 rebase ***
+                  # 解决 'Updates were rejected because the remote contains work' 的错误
+                  git pull --rebase origin main 
+                  
                   # 推送更改
                   git push
                   echo "Successfully committed and pushed changes."
