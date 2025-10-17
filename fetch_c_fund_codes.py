@@ -1,83 +1,98 @@
 import requests
 import re
 import json
-import pandas as pd
+import time
 import os
 
-# --- 配置 ---
-# 东方财富网基金代码列表URL
-url = 'http://fund.eastmoney.com/js/fundcode_search.js'
-# 设置 User-Agent 避免被拒绝
-headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
-# 输出文件名
-output_file = 'C类.txt'
-
-def fetch_and_filter_funds():
+def fetch_fund_data():
     """
-    从东方财富获取所有基金代码，筛选出场外 C 类基金，并保存到文件。
+    从东方财富获取最新的基金代码数据。
+    该数据以JavaScript变量r = [...]的形式存在。
     """
+    url = "http://fund.eastmoney.com/js/fundcode_search.js"
+    headers = {
+        # 模拟浏览器访问，防止被拒绝
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    
+    # 打印提示信息
+    print(f"--- 正在从 {url} 获取基金代码数据... ---")
+    
     try:
-        print(f"1. 正在从 {url} 获取基金代码数据...")
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status() # 检查 HTTP 错误
-
-        text = response.text
-
-        # 提取 JSON 数据（去除 js 包装）
-        # 匹配格式如：var r = [["000001","HXCZ","华夏成长","混合型","H","huaxiacaizhi"],...]
-        match = re.search(r'var r = (\[.*?\]);', text, re.DOTALL)
+        # 发起HTTP请求，设置超时
+        response = requests.get(url, headers=headers, timeout=15)
+        response.raise_for_status() # 如果状态码不是200，则抛出异常
+        content = response.text
+        
+        # 使用正则表达式匹配并提取JavaScript变量 r 的内容，即 JSON 数组
+        # r = [[...], [...]];
+        match = re.search(r'var r = (\[.*?\]);', content, re.DOTALL)
+        
         if not match:
-            print("错误：未找到基金代码列表数据结构。")
-            return
-
-        funds = json.loads(match.group(1))
-
-        # 转换为 DataFrame
-        # 字段含义: [代码, 拼音简称, 基金名称, 类型, 拼音首字母, 全拼]
-        df = pd.DataFrame(funds, columns=['code', 'pinyin', 'name', 'type', 'initial', 'full_pinyin'])
+            print("错误: 无法在响应内容中找到基金数据数组 'r'。")
+            return None
+            
+        json_string = match.group(1)
         
-        # 确保代码是纯数字
-        df['code'] = df['code'].str.extract(r'(\d+)').astype(str)
-
-        print("2. 正在筛选场外 C 类基金...")
-        
-        # 筛选逻辑：
-        # 1. 基金名称包含 'C'（通常代表C类份额）
-        # 2. 基金类型不包含 '场内'、'ETF'、'LOF' 或 '联接'（排除场内交易、联接基金以聚焦场外申购的C类）
-        c_df = df[
-            df['name'].str.contains('C', na=False) & 
-            ~df['type'].str.contains('场内|ETF|LOF|联接', na=False, case=False)
-        ]
-
-        # 提取代码列表
-        codes = c_df['code'].tolist()
-        
-        # 移除重复代码
-        codes = sorted(list(set(codes)))
-
-        # 检查 codes 列表是否为空
-        if not codes:
-            print("警告：筛选结果为空，没有找到匹配的场外 C 类基金代码。")
-            return
-
-        # 保存 TXT
-        print(f"3. 筛选完成，共找到 {len(codes)} 个场外 C 类基金代码。")
-        
-        # 确保目录存在（如果需要保存到子目录，但这里保存到根目录）
-        # os.makedirs(os.path.dirname(output_file), exist_ok=True) 
-
-        with open(output_file, 'w', encoding='utf-8') as f:
-            for code in codes:
-                f.write(code + '\n')
-
-        print(f"4. 成功保存代码到 {output_file}")
+        # 将提取的 JSON 字符串解析为 Python 列表
+        fund_data = json.loads(json_string)
+        return fund_data
 
     except requests.exceptions.RequestException as e:
-        print(f"网络请求错误: {e}")
-    except json.JSONDecodeError:
-        print("错误：JSON 数据解析失败。")
-    except Exception as e:
-        print(f"发生未知错误: {e}")
+        print(f"请求数据时发生网络错误: {e}")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"解析 JSON 数据时发生格式错误: {e}")
+        print("提示: 数据格式可能已改变，请检查原始文件内容。")
+        return None
 
-if __name__ == '__main__':
-    fetch_and_filter_funds()
+def filter_c_funds(fund_data):
+    """
+    过滤基金列表，找出名称以 'C' 结尾的 C 类基金代码。
+    基金数据格式通常为: [代码(0), 拼音缩写(1), 基金名称(2), 基金类型(3), 拼音全称(4), ...]
+    """
+    if not fund_data:
+        return []
+        
+    c_fund_codes = []
+    
+    # 基金名称位于索引 2
+    NAME_INDEX = 2
+    
+    for row in fund_data:
+        # 确保行中至少有3个元素，并且基金名称是字符串类型
+        if len(row) > NAME_INDEX and isinstance(row[NAME_INDEX], str):
+            fund_name = row[NAME_INDEX].strip()
+            # 检查基金名称是否以 'C' 结尾
+            if fund_name.endswith('C'):
+                # 基金代码始终是第一个元素 (索引 0)
+                fund_code = row[0]
+                c_fund_codes.append(fund_code)
+            
+    return c_fund_codes
+
+def save_codes_to_file(codes, filename="C类.txt"):
+    """将基金代码列表保存到文本文件中。"""
+    try:
+        with open(filename, 'w', encoding='utf-8') as f:
+            for code in codes:
+                f.write(f"{code}\n")
+        print(f"--- 成功筛选出 {len(codes)} 个 C 类基金代码，并保存到文件: {filename} ---")
+    except IOError as e:
+        print(f"写入文件时发生错误: {e}")
+
+if __name__ == "__main__":
+    start_time = time.time()
+    
+    # 1. 获取所有基金数据
+    all_funds = fetch_fund_data()
+    
+    if all_funds:
+        # 2. 筛选 C 类基金代码
+        c_codes = filter_c_funds(all_funds)
+        
+        # 3. 保存结果
+        save_codes_to_file(c_codes, "C0类.txt")
+    
+    end_time = time.time()
+    print(f"总耗时: {end_time - start_time:.2f} 秒")
