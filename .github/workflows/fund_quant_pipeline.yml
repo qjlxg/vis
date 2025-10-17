@@ -6,7 +6,7 @@ on:
       - main
   workflow_dispatch:
   schedule:
-    # 每天定时运行，例如 UTC 时间 14:00 (北京时间 22:00)
+    # 每天定时运行，UTC 时间 14:00 (北京时间 22:00)
     - cron: '0 14 * * *'
 
 jobs:
@@ -20,35 +20,30 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          # 推荐使用 Python 3.10 或更高版本
           python-version: '3.10'
           
-      # 【新增】安装系统级中文支持字体 Noto CJK SC
-      - name: Install system dependencies (Chinese Font)
+      - name: Install system dependencies
         run: |
           sudo apt-get update
-          # 安装 Noto Sans CJK SC 字体，以支持 Matplotlib 中文显示
           sudo apt-get install -y fonts-noto-cjk
+          # 验证字体安装
+          ls /usr/share/fonts/truetype/noto-cjk/ || ls /usr/share/fonts/truetype/noto/
           
       - name: Install Python dependencies
         run: |
-          # 安装 pandas, numpy, matplotlib 等必要的依赖库
-          pip install pandas numpy matplotlib
+          pip install pandas==2.2.2 numpy==1.26.4 matplotlib==3.9.2
           
-      # --- 核心步骤：量化策略指数构建 --
       - name: Run Quant Strategy Index Builder
-        # 假设您的脚本名为 quant_strategy_index_builder.py
-        run: python quant_strategy_index_builder.py
+        run: |
+          python simple_index.py
+          # 验证文件生成
+          ls -l plots/ || echo "No plots generated"
         
       - name: Commit and Push Results
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'Automated quant analysis pipeline update: Strategy Index Report and Signal Strength Index'
-          # 【更新】捕获所有生成的 .md 报告和 .png 图片
-          # 脚本会在日期目录下生成文件，所以使用 **/ 匹配所有子目录
-          file_pattern: |
-            **/*.md
-            **/*.png
+          commit_message: 'Automated quant analysis pipeline update: NAV and Signal Count Plots'
+          file_pattern: 'plots/*.png'
           commit_user_name: GitHub Actions Bot
           commit_user_email: actions@github.com
           branch: main
