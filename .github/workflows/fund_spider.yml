@@ -9,7 +9,7 @@ on:
       - 'fund_spider.py'
       - 'C类.txt'
   schedule:
-      - cron: 0 */3 * * *
+      - cron: 0 */10 * * *
 
 jobs:
   update-data:
