@@ -8,10 +8,9 @@ import matplotlib.font_manager as fm
 
 # --- 配置参数 ---
 FUND_DATA_DIR = 'fund_data'  # 基金数据目录
-INDEX_NAME = 'Simple_BuySignal_Index'  # 指数名称
-STARTING_NAV = 1000  # 起始净值
+INDEX_NAME = 'BuySignal_Count_Index'  # 指数名称（基于买入信号数量）
 MA_WINDOW = 50  # MA窗口
-RISK_FREE_RATE_DAILY = 0.03 / 252  # 无风险利率（年化3%日化）
+STARTING_VALUE = 0  # 指数初始值（数量从0开始）
 
 # 信号阈值
 RSI_STRONG_BUY = 30
@@ -152,68 +151,51 @@ class SimpleIndexBuilder:
             print(f"错误: 公共日期少于 {MA_WINDOW} 天")
             return False
 
-        self._precalculate_signals_and_returns()
+        self._precalculate_signals()
         return True
 
-    def _precalculate_signals_and_returns(self):
+    def _precalculate_signals(self):
         signals = {}
-        returns = {}
         for code, df in self.all_data.items():
             signals[code] = generate_action_signal(df)
-            returns[code] = df['net_value'].pct_change()
         self.signals_df = pd.DataFrame(signals).reindex(self.common_dates)
-        self.returns_df = pd.DataFrame(returns).reindex(self.common_dates)
 
     def build_index(self):
-        index_nav = [STARTING_NAV]
-        current_holdings = []
+        """统计信号数量作为指数值"""
+        index_values = []
+        for date in self.common_dates:
+            signals = self.signals_df.loc[date]
+            # 统计强买入和弱买入的基金数量
+            buy_count = signals.isin(['强买入', '弱买入']).sum()
+            index_values.append(buy_count)
 
-        for i, date in enumerate(self.common_dates):
-            if i == 0:
-                continue
-
-            prev_date = self.common_dates[i-1]
-            prev_signals = self.signals_df.loc[prev_date]
-            buy_codes = prev_signals[prev_signals.isin(['强买入', '弱买入'])].index.tolist()
-
-            strategy_return = RISK_FREE_RATE_DAILY  # 默认无风险利率
-            if buy_codes:
-                current_holdings = buy_codes
-                holdings_returns = self.returns_df.loc[date, current_holdings].dropna()
-                if not holdings_returns.empty:
-                    strategy_return = holdings_returns.mean()
-
-            prev_nav = index_nav[-1]
-            current_nav = prev_nav * (1 + strategy_return)
-            index_nav.append(current_nav)
-
-        index_df = pd.DataFrame({'NAV': index_nav}, index=self.common_dates)
+        index_df = pd.DataFrame({'Index_Value': index_values}, index=self.common_dates)
         return index_df
 
-    def plot_nav_curve(self, index_df):
-        # 设置支持中文的字体
+    def plot_index_curve(self, index_df):
+        """绘制信号数量的曲线图"""
         plt.rcParams['font.sans-serif'] = ['Noto Sans CJK SC', 'SimHei', 'DejaVu Sans']
-        plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+        plt.rcParams['axes.unicode_minus'] = False
 
         plt.figure(figsize=(12, 6))
-        plt.plot(index_df.index, index_df['NAV'], label=INDEX_NAME, color='blue')
-        plt.title(f'{INDEX_NAME} NAV 曲线图')
+        plt.plot(index_df.index, index_df['Index_Value'], label=INDEX_NAME, color='blue')
+        plt.title(f'{INDEX_NAME} 信号数量指数')
         plt.xlabel('日期')
-        plt.ylabel('净值 (起始=1000)')
+        plt.ylabel('买入信号基金数量')
         plt.legend()
         plt.grid(True)
         now = datetime.now().strftime('%Y%m%d_%H%M%S')
-        plot_file = f'plots/{INDEX_NAME}_{now}.png'  # 保存到 plots 目录
-        os.makedirs('plots', exist_ok=True)  # 确保目录存在
+        plot_file = f'plots/{INDEX_NAME}_{now}.png'
+        os.makedirs('plots', exist_ok=True)
         plt.savefig(plot_file)
         plt.close()
-        print(f"曲线图已保存到: {plot_file}")
+        print(f"指数曲线图已保存到: {plot_file}")
 
     def run(self):
         if not self.load_and_preprocess_data():
             return
         index_df = self.build_index()
-        self.plot_nav_curve(index_df)
+        self.plot_index_curve(index_df)
 
 if __name__ == '__main__':
     builder = SimpleIndexBuilder()
