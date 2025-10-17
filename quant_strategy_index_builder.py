@@ -121,10 +121,18 @@ class IndexBuilder:
 
     def load_and_preprocess_data(self):
         """加载所有基金和基准指数数据，计算指标，并查找公共日期。"""
-        # 1. 加载沪深300数据 (从 INDEX_DATA_DIR)
+        # 1. 检查目录是否存在
+        if not os.path.exists(self.fund_data_dir):
+            logger.error(f"错误: 基金数据目录 '{self.fund_data_dir}' 不存在。")
+            return False
+        if not os.path.exists(self.index_data_dir):
+            logger.error(f"错误: 指数数据目录 '{self.index_data_dir}' 不存在。")
+            # 允许继续，但沪深300数据将为 None
+            
+        # 2. 加载沪深300数据 (从 INDEX_DATA_DIR)
         self.csi300_data = self._get_csi300_data()
         
-        # 2. 加载基金数据 (从 FUND_DATA_DIR)
+        # 3. 加载基金数据 (从 FUND_DATA_DIR)
         csv_files = glob.glob(os.path.join(self.fund_data_dir, '*.csv'))
         
         all_dates_indices = []
@@ -156,10 +164,21 @@ class IndexBuilder:
             logger.error("没有成功加载任何基金数据。")
             return False
 
-        # 3. 确定公共日期范围
-        full_date_range = pd.to_datetime(pd.concat(all_dates_indices).unique())
+        # --- 4. 确定公共日期范围 (已修复 TypeError) ---
+        if not all_dates_indices:
+            logger.error("无法确定日期范围，all_dates_indices为空。")
+            return False
+
+        # 使用 union 方法合并所有 DatetimeIndex 对象，得到所有日期集合
+        # 这是修复 pd.concat(all_dates_indices) 错误的关键
+        full_index = all_dates_indices[0]
+        for index in all_dates_indices[1:]:
+            full_index = full_index.union(index)
+            
+        full_date_range = full_index
+        # ---------------------------------------------
         
-        # 确定最晚的起始日期和最早的结束日期
+        # 确定最晚的起始日期和最早的结束日期 (用于限定公共范围)
         min_start_date = max(df.index.min() for df in self.all_data.values())
         if self.csi300_data is not None:
             min_start_date = max(min_start_date, self.csi300_data.index.min())
@@ -317,14 +336,6 @@ class IndexBuilder:
     def run(self):
         """主执行流程。"""
         logger.info("开始执行量化策略指数构建...")
-        
-        # 检查数据目录是否存在
-        if not os.path.exists(self.fund_data_dir):
-            logger.error(f"错误: 基金数据目录 '{self.fund_data_dir}' 不存在。")
-            return None
-        if not os.path.exists(self.index_data_dir):
-            logger.error(f"错误: 指数数据目录 '{self.index_data_dir}' 不存在。")
-            return None
             
         if not self.load_and_preprocess_data():
             logger.warning("数据加载失败或数据量不足，停止指数构建。")
