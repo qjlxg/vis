@@ -42,8 +42,8 @@ jobs:
       - name: Commit and Push Results
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'Automated quant analysis pipeline update: NAV and Signal Count Plots'
-          file_pattern: 'plots/*.png'
+          commit_message: 'Automated quant analysis pipeline update: NAV and Signal Count Plots/CSV'
+          file_pattern: 'plots/*.png plots/*.csv' # <-- 修改点：包含 CSV 文件
           commit_user_name: GitHub Actions Bot
           commit_user_email: actions@github.com
           branch: main
