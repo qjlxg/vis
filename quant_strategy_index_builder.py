@@ -4,9 +4,9 @@ import os
 import glob
 from datetime import datetime
 import logging
+import io
 
 # --- 配置参数 ---
-# 明确区分基金数据目录和指数数据目录
 FUND_DATA_DIR = 'fund_data'
 INDEX_DATA_DIR = 'index_data'
 INDEX_REPORT_BASE_NAME = 'quant_strategy_index_report'
@@ -14,12 +14,47 @@ INDEX_NAME = 'MarketMonitor_BuySignal_Index'
 CSI300_CODE = '000300' 
 CSI300_FILENAME = f'{CSI300_CODE}.csv' 
 STARTING_NAV = 1000
+RISK_FREE_RATE_ANNUAL = 0.03 # 假设年化无风险利率 3%
+RISK_FREE_RATE_DAILY = RISK_FREE_RATE_ANNUAL / 252 # 每日无风险收益率
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# --- 关键技术指标计算函数 (与 market_monitor.py 保持一致) ---
+# --- 关键绩效指标计算函数 ---
+
+def calculate_mdd(nav_series):
+    """计算最大回撤 (Maximum Drawdown)"""
+    if nav_series.empty:
+        return 0.0
+    # 计算累计最大值 (Previous Peak)
+    rolling_max = nav_series.expanding().max()
+    # 计算回撤
+    drawdown = (nav_series / rolling_max) - 1.0
+    return abs(drawdown.min())
+
+def calculate_sharpe_ratio(return_series, risk_free_rate_daily):
+    """计算年化夏普比率 (假设 252 个交易日)"""
+    if return_series.empty or len(return_series) < 2:
+        return np.nan
+    
+    # 转换为日收益率 (假设 index_data['Strategy_Return'] 已经是日收益率)
+    daily_returns = return_series.dropna()
+    
+    # 计算超额收益
+    excess_returns = daily_returns - risk_free_rate_daily
+    
+    # 年化夏普比率
+    mean_excess_return = excess_returns.mean()
+    std_excess_return = excess_returns.std()
+    
+    if std_excess_return == 0:
+        return np.nan # 波动率为零时，夏普比率无意义
+
+    # 年化
+    return (mean_excess_return / std_excess_return) * np.sqrt(252)
+
+# --- 信号计算函数 (已根据用户要求调整阈值) ---
 
 def calculate_technical_indicators_for_day(df):
     """
@@ -37,6 +72,7 @@ def calculate_technical_indicators_for_day(df):
     delta = df['net_value'].diff()
     gain = delta.where(delta > 0, 0)
     loss = -delta.where(delta < 0, 0)
+    # 使用 EWM 平滑计算 RSI (更贴近真实应用)
     avg_gain = gain.ewm(com=13, adjust=False).mean()
     avg_loss = loss.ewm(com=13, adjust=False).mean()
     rs = avg_gain / avg_loss
@@ -56,31 +92,43 @@ def calculate_technical_indicators_for_day(df):
 
 def generate_action_signal(row):
     """
-    根据 market_monitor.py 的逻辑 (假设的简化规则) 生成行动信号。
+    根据调整后的逻辑生成行动信号。
     信号：强买入/弱买入/持有观察/强卖出规避
     """
     rsi = row['RSI']
     macd = row.get('MACD')
     signal = row.get('MACD_Signal')
+    prev_macd = row.get('Prev_MACD', -99)
+    prev_signal = row.get('Prev_Signal', -99)
     nav_ma50 = row.get('NAV_MA50')
     
-    if pd.isna(rsi) or pd.isna(nav_ma50):
+    if pd.isna(rsi) or pd.isna(nav_ma50) or pd.isna(macd) or pd.isna(signal):
         return '持有/观察'
         
-    # --- 信号规则 ---
-    if rsi > 70 or nav_ma50 > 1.2:
+    # --- 信号规则 (已调整阈值) ---
+    
+    # 强卖出/规避：趋势严重恶化或过度超买
+    if nav_ma50 < 0.95 or rsi > 75: 
         return '强卖出/规避'
     
-    if rsi < 25 and nav_ma50 < 1.00:
-        return '强买入'
+    # 强买入：深度超卖且接近底部
+    # RSI < 30 (原 25/30) + 价格低于长期均线 + MACD金叉
+    if rsi < 30 and nav_ma50 < 1.00:
+        # MACD金叉
+        if macd > signal and prev_macd < prev_signal:
+             return '强买入'
+        # 深度超卖（无需金叉）
+        if rsi < 25:
+             return '强买入'
     
-    if rsi < 30:
+    # 弱买入：超卖或 MACD 转向
+    # RSI < 40 (原 30) + MACD 金叉 (修正：使用金叉作为独立信号)
+    if rsi < 40:
         return '弱买入'
     
-    if not pd.isna(macd) and not pd.isna(signal):
-        # MACD金叉
-        if macd > signal and row.get('Prev_MACD', -99) < row.get('Prev_Signal', -99):
-            return '弱买入'
+    # MACD金叉作为弱买入补充信号
+    if macd > signal and prev_macd < prev_signal:
+        return '弱买入'
 
     return '持有/观察'
 
@@ -95,11 +143,10 @@ class IndexBuilder:
         self.all_data = {}
         self.csi300_data = None
         self.common_dates = None
+        self.risk_free_rate_daily = RISK_FREE_RATE_DAILY
 
     def _get_csi300_data(self):
-        """
-        从 index_data 目录加载沪深300指数数据。
-        """
+        """从 index_data 目录加载沪深300指数数据。"""
         csi300_file = os.path.join(self.index_data_dir, CSI300_FILENAME)
         if not os.path.exists(csi300_file):
             logger.warning(f"警告：未找到沪深300数据文件 '{csi300_file}'。指数对比功能将被禁用。")
@@ -125,9 +172,6 @@ class IndexBuilder:
         if not os.path.exists(self.fund_data_dir):
             logger.error(f"错误: 基金数据目录 '{self.fund_data_dir}' 不存在。")
             return False
-        if not os.path.exists(self.index_data_dir):
-            logger.error(f"错误: 指数数据目录 '{self.index_data_dir}' 不存在。")
-            # 允许继续，但沪深300数据将为 None
             
         # 2. 加载沪深300数据 (从 INDEX_DATA_DIR)
         self.csi300_data = self._get_csi300_data()
@@ -142,8 +186,9 @@ class IndexBuilder:
         for filepath in csv_files:
             fund_code = os.path.splitext(os.path.basename(filepath))[0]
             try:
+                # 假设文件只有 date, net_value 两列，并确保加载到足够的历史数据
                 df = pd.read_csv(filepath)
-                df = df.rename(columns={'net_value': 'net_value', 'date': 'date'}) # 保持列名统一
+                df = df.rename(columns={'net_value': 'net_value', 'date': 'date'}) 
                 df['net_value'] = pd.to_numeric(df['net_value'], errors='coerce')
                 df['date'] = pd.to_datetime(df['date'])
                 df.dropna(subset=['net_value', 'date'], inplace=True)
@@ -151,6 +196,7 @@ class IndexBuilder:
                 
                 # 历史计算技术指标
                 df = calculate_technical_indicators_for_day(df.copy())
+                # 用于MACD金叉判断
                 df['Prev_MACD'] = df['MACD'].shift(1)
                 df['Prev_Signal'] = df['MACD_Signal'].shift(1)
                 
@@ -164,49 +210,58 @@ class IndexBuilder:
             logger.error("没有成功加载任何基金数据。")
             return False
 
-        # --- 4. 确定公共日期范围 (已修复 TypeError) ---
+        # 4. 确定公共日期范围
         if not all_dates_indices:
             logger.error("无法确定日期范围，all_dates_indices为空。")
             return False
 
-        # 使用 union 方法合并所有 DatetimeIndex 对象，得到所有日期集合
-        # 这是修复 pd.concat(all_dates_indices) 错误的关键
+        # 使用 union 方法合并所有 DatetimeIndex 对象
         full_index = all_dates_indices[0]
         for index in all_dates_indices[1:]:
             full_index = full_index.union(index)
             
         full_date_range = full_index
-        # ---------------------------------------------
         
-        # 确定最晚的起始日期和最早的结束日期 (用于限定公共范围)
+        # 确定最早的可计算指标的日期（通常是所有基金中最晚的开始日期）
         min_start_date = max(df.index.min() for df in self.all_data.values())
         if self.csi300_data is not None:
             min_start_date = max(min_start_date, self.csi300_data.index.min())
 
+        # 确定最晚的结束日期
         max_end_date = min(df.index.max() for df in self.all_data.values())
         if self.csi300_data is not None:
              max_end_date = min(max_end_date, self.csi300_data.index.max())
 
-        
+        # 限制公共日期范围
         self.common_dates = full_date_range[
             (full_date_range >= min_start_date) & 
             (full_date_range <= max_end_date)
         ].sort_values()
+        
+        # 剔除无法计算指标的初期数据 (例如：需要50天数据才能计算MA50)
+        self.common_dates = self.common_dates[self.common_dates >= self.common_dates.min() + pd.Timedelta(days=50)]
 
         if len(self.common_dates) < 50:
              logger.error(f"警告：公共数据日期少于50天 (找到 {len(self.common_dates)} 天)。指数可能不稳定。")
+             return False # 至少需要50天数据
         
         logger.info(f"数据预处理完成。公共日期范围: {self.common_dates.min().strftime('%Y-%m-%d')} - {self.common_dates.max().strftime('%Y-%m-%d')}")
         return True
 
     def build_index(self):
-        """计算策略指数和基准指数的每日净值 (NAV)。"""
+        """
+        计算策略指数和基准指数的每日净值 (NAV)。
+        策略改进：当无买入信号时，保持前一交易日的持仓组合，而不是收益为 0。
+        """
         
         index_data = pd.DataFrame(index=self.common_dates)
         
         index_nav = [self.starting_nav]
         csi300_nav = [self.starting_nav]
-
+        
+        # 当前持仓基金代码列表 (用于“持仓等待新信号”的逻辑)
+        current_holdings = [] 
+        
         # 预先计算所有基金和沪深300的日收益率
         daily_returns = {}
         for code, df in self.all_data.items():
@@ -223,24 +278,56 @@ class IndexBuilder:
                 continue
                 
             prev_date = self.common_dates[i-1]
-            buy_signal_returns = []
+            buy_signal_codes = []
             
-            # 策略指数计算 (Strategy Index)
+            # 1. 检查前一日是否出现新的买入信号 (Rebalance/Switch day)
             for code, df in self.all_data.items():
                 if prev_date in df.index:
                     signal = generate_action_signal(df.loc[prev_date])
                     
                     if signal in ['强买入', '弱买入']:
-                        if date in daily_returns[code].index and not pd.isna(daily_returns[code].loc[date]):
-                             buy_signal_returns.append(daily_returns[code].loc[date])
+                        buy_signal_codes.append(code)
 
-            if buy_signal_returns:
-                strategy_return = np.mean(buy_signal_returns)
-                signal_count = len(buy_signal_returns)
-            else:
-                strategy_return = 0.0 # 无信号基金时，当日收益为 0 (持币)
-                signal_count = 0
+            strategy_return = 0.0
             
+            if buy_signal_codes:
+                # 2a. 出现新信号：清仓旧持仓，买入新的信号组合 (换仓/再平衡)
+                current_holdings = buy_signal_codes
+                signal_count = len(current_holdings)
+                
+                # 计算当日收益：新组合的日收益率平均值
+                holdings_returns = []
+                for code in current_holdings:
+                    if date in daily_returns[code].index and not pd.isna(daily_returns[code].loc[date]):
+                        holdings_returns.append(daily_returns[code].loc[date])
+                
+                if holdings_returns:
+                    strategy_return = np.mean(holdings_returns)
+                else:
+                    # 极端情况：新信号基金当日无数据，按无风险利率计算
+                    strategy_return = self.risk_free_rate_daily
+                    
+            elif current_holdings:
+                # 2b. 无新信号，但有持仓：保持前日的持仓组合 (持仓等待)
+                signal_count = len(current_holdings)
+                
+                # 计算当日收益：旧组合的日收益率平均值
+                holdings_returns = []
+                for code in current_holdings:
+                    if date in daily_returns[code].index and not pd.isna(daily_returns[code].loc[date]):
+                        holdings_returns.append(daily_returns[code].loc[date])
+                        
+                if holdings_returns:
+                    strategy_return = np.mean(holdings_returns)
+                else:
+                    # 极端情况：所有持仓基金当日无数据/停牌，按无风险利率计算
+                    strategy_return = self.risk_free_rate_daily
+                    
+            else:
+                # 2c. 无新信号，且无持仓 (仅发生在数据期初或极端清仓后)
+                signal_count = 0
+                strategy_return = self.risk_free_rate_daily # 按无风险利率计算
+
             # 基准指数计算 (CSI300)
             if csi300_returns is not None and date in csi300_returns.index and not pd.isna(csi300_returns.loc[date]):
                 csi300_return = csi300_returns.loc[date]
@@ -260,17 +347,25 @@ class IndexBuilder:
             # 记录数据
             index_data.loc[date, 'Strategy_Return'] = strategy_return
             index_data.loc[date, 'CSI300_Return'] = csi300_return
-            index_data.loc[date, 'Signal_Funds_Count'] = signal_count
+            index_data.loc[date, 'Signal_Funds_Count'] = signal_count # 记录的是当日持仓的基金数
+            # index_data.loc[date, 'Holding_Codes'] = ','.join(current_holdings) # 可选：记录持仓代码
 
         # 最终数据整理
         index_data['Strategy_NAV'] = index_nav
         index_data['CSI300_NAV'] = csi300_nav
         index_data.index.name = 'Date'
         
-        return index_data
+        # 计算核心绩效指标
+        strategy_mdd = calculate_mdd(index_data['Strategy_NAV'])
+        csi300_mdd = calculate_mdd(index_data['CSI300_NAV'])
+        
+        strategy_sharpe = calculate_sharpe_ratio(index_data['Strategy_Return'], self.risk_free_rate_daily)
+        csi300_sharpe = calculate_sharpe_ratio(index_data['CSI300_Return'], self.risk_free_rate_daily)
 
-    def generate_report(self, index_df):
-        """生成 Markdown 报告，输出到年月目录中。"""
+        return index_data, strategy_mdd, csi300_mdd, strategy_sharpe, csi300_sharpe
+
+    def generate_report(self, index_df, strategy_mdd, csi300_mdd, strategy_sharpe, csi300_sharpe):
+        """生成 Markdown 报告，增强量化指标输出。"""
         now = datetime.now()
         start_date = index_df.index.min().strftime('%Y-%m-%d')
         end_date = index_df.index.max().strftime('%Y-%m-%d')
@@ -286,18 +381,22 @@ class IndexBuilder:
         
         report = f"# 量化策略指数报告 - {self.index_name}\n\n"
         report += f"生成日期: {now.strftime('%Y-%m-%d %H:%M:%S')}\n"
-        report += f"数据周期: {start_date} 至 {end_date} (共 {len(index_df)} 个交易日)\n\n"
+        report += f"数据周期: {start_date} 至 {end_date} (共 {len(index_df)} 个交易日)\n"
+        report += f"策略逻辑: 仅在出现'强买入'或'弱买入'信号时换仓，等权持有信号基金，否则保持现有持仓。\n"
+        report += f"无持仓时按年化 {RISK_FREE_RATE_ANNUAL:.1%} (每日 {RISK_FREE_RATE_DAILY:.4f}) 计算收益。\n\n"
         
         report += f"## **策略指数表现总结**\n"
-        report += f"**指数名称:** {self.index_name} (基于 market_monitor.py 强/弱买入信号等权)\n"
+        report += f"**指数名称:** {self.index_name}\n"
         report += f"**起始净值:** {self.starting_nav:.0f}\n"
-        report += f"| 指数 | 最终净值 | 总回报率 | 超额收益 (对比沪深300) |\n"
-        report += f"| :--- | ---: | ---: | :---: |\n"
-        report += f"| **{self.index_name}** | **{strategy_nav_end:.4f}** | **{total_return_strategy:.2%}** | **{excess_return:.2%}** |\n"
-        report += f"| **沪深300 (基准)** | {csi300_nav_end:.4f} | {total_return_csi300:.2%} | - |\n\n"
+        
+        report += "| 指数 | 最终净值 | 总回报率 | 超额收益 | 夏普比率 | 最大回撤 |\n"
+        report += "| :--- | ---: | ---: | :---: | :---: | :---: |\n"
+        report += (f"| **{self.index_name}** | **{strategy_nav_end:.4f}** | **{total_return_strategy:.2%}** "
+                   f"| **{excess_return:.2%}** | **{strategy_sharpe:.2f}** | **{strategy_mdd:.2%}** |\n")
+        report += (f"| **沪深300 (基准)** | {csi300_nav_end:.4f} | {total_return_csi300:.2%} "
+                   f"| - | {csi300_sharpe:.2f} | {csi300_mdd:.2%} |\n\n")
         
         report += "## 指数净值历史走势 (最新 60 天)\n\n"
-        report += "**注：** 指数假设在信号日后的第一个交易日等权买入所有信号基金。无信号时持币 (收益为 0)。\n\n"
         
         # 显示最新 60 天
         display_df = index_df.tail(60).copy()
@@ -310,7 +409,7 @@ class IndexBuilder:
             'CSI300_NAV': '沪深300净值',
             'Strategy_Return': '策略日收益',
             'CSI300_Return': '300日收益',
-            'Signal_Funds_Count': '信号基金数'
+            'Signal_Funds_Count': '持仓基金数'
         })
         
         # 格式化收益率 (只在输出时格式化)
@@ -324,7 +423,8 @@ class IndexBuilder:
         
         REPORT_FILE = os.path.join(DIR_NAME, f"{INDEX_REPORT_BASE_NAME}_{timestamp_for_filename}.md")
         
-        markdown_table = display_df[['策略指数净值', '沪深300净值', '策略日收益', '300日收益', '信号基金数']].to_markdown(index=True)
+        # 使用 to_markdown (需要 tabulate 库)
+        markdown_table = display_df[['策略指数净值', '沪深300净值', '策略日收益', '300日收益', '持仓基金数']].to_markdown(index=True)
         
         with open(REPORT_FILE, 'w', encoding='utf-8') as f:
             f.write(report)
@@ -341,10 +441,12 @@ class IndexBuilder:
             logger.warning("数据加载失败或数据量不足，停止指数构建。")
             return None
         
-        index_df = self.build_index()
+        # 获取增强后的回测结果
+        result = self.build_index()
         
-        if index_df is not None:
-            self.generate_report(index_df)
+        if result is not None:
+            index_df, strategy_mdd, csi300_mdd, strategy_sharpe, csi300_sharpe = result
+            self.generate_report(index_df, strategy_mdd, csi300_mdd, strategy_sharpe, csi300_sharpe)
 
 
 if __name__ == '__main__':
