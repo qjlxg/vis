@@ -4,37 +4,42 @@ import os
 import glob
 from datetime import datetime
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
 
 # --- 配置参数 ---
 FUND_DATA_DIR = 'fund_data'  # 基金数据目录
 INDEX_NAME = 'Simple_BuySignal_Index'  # 指数名称
 STARTING_NAV = 1000  # 起始净值
 MA_WINDOW = 50  # MA窗口
+RISK_FREE_RATE_DAILY = 0.03 / 252  # 无风险利率（年化3%日化）
 
-# 信号阈值（可调整）
+# 信号阈值
 RSI_STRONG_BUY = 30
 RSI_WEAK_BUY = 40
 NAV_MA50_STRONG_SELL = 0.95
 NAV_MA50_STRONG_BUY_MAX = 1.00
 RSI_STRONG_SELL_MAX = 75
-MAX_MISSING_DAYS = 20  # 最大连续缺失天数，超过跳过基金
+MAX_MISSING_DAYS = 20  # 最大连续缺失天数
 
 # --- 辅助函数 ---
 
 def validate_data(df, filepath):
-    """简单验证数据"""
+    """验证数据完整性"""
     required_columns = ['date', 'net_value']
     if not all(col in df.columns for col in required_columns):
+        print(f"错误: 文件 {filepath} 缺少必需列 {required_columns}")
         return False
     df['net_value'] = pd.to_numeric(df['net_value'], errors='coerce')
     df.dropna(subset=['net_value'], inplace=True)
     if (df['net_value'] <= 0).any():
+        print(f"错误: 文件 {filepath} 包含无效净值（负值或零）")
         return False
     return True
 
 def calculate_technical_indicators(df, ma_window):
     """计算RSI, MACD, MA"""
     if len(df) < ma_window:
+        print(f"警告: 数据少于 {ma_window} 天，跳过指标计算")
         return df
 
     # RSI (14 days)
@@ -97,7 +102,7 @@ class SimpleIndexBuilder:
 
     def load_and_preprocess_data(self):
         if not os.path.exists(FUND_DATA_DIR):
-            print(f"错误: 目录 '{FUND_DATA_DIR}' 不存在。")
+            print(f"错误: 目录 '{FUND_DATA_DIR}' 不存在")
             return False
 
         csv_files = glob.glob(os.path.join(FUND_DATA_DIR, '*.csv'))
@@ -117,7 +122,7 @@ class SimpleIndexBuilder:
                 max_consecutive_na = is_na_series.rolling(window=MAX_MISSING_DAYS).sum().max()
                 missing_ratio = is_na_series.sum() / len(is_na_series)
                 if max_consecutive_na >= MAX_MISSING_DAYS or missing_ratio > 0.5:
-                    print(f"警告: 基金 {fund_code} 缺失数据过多，跳过。")
+                    print(f"警告: 基金 {fund_code} 缺失数据过多，跳过")
                     continue
 
                 df['net_value'] = df['net_value'].interpolate(method='linear').ffill().bfill()
@@ -129,7 +134,7 @@ class SimpleIndexBuilder:
                 continue
 
         if not self.all_data:
-            print("错误: 没有加载任何基金数据。")
+            print("错误: 没有加载任何基金数据")
             return False
 
         # 公共日期
@@ -144,7 +149,7 @@ class SimpleIndexBuilder:
         self.common_dates = self.common_dates[self.common_dates >= min_indicator_start]
 
         if len(self.common_dates) < MA_WINDOW:
-            print(f"错误: 公共日期少于 {MA_WINDOW} 天。")
+            print(f"错误: 公共日期少于 {MA_WINDOW} 天")
             return False
 
         self._precalculate_signals_and_returns()
@@ -171,7 +176,7 @@ class SimpleIndexBuilder:
             prev_signals = self.signals_df.loc[prev_date]
             buy_codes = prev_signals[prev_signals.isin(['强买入', '弱买入'])].index.tolist()
 
-            strategy_return = 0.0
+            strategy_return = RISK_FREE_RATE_DAILY  # 默认无风险利率
             if buy_codes:
                 current_holdings = buy_codes
                 holdings_returns = self.returns_df.loc[date, current_holdings].dropna()
@@ -186,6 +191,10 @@ class SimpleIndexBuilder:
         return index_df
 
     def plot_nav_curve(self, index_df):
+        # 设置支持中文的字体
+        plt.rcParams['font.sans-serif'] = ['Noto Sans CJK SC', 'SimHei', 'DejaVu Sans']
+        plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+
         plt.figure(figsize=(12, 6))
         plt.plot(index_df.index, index_df['NAV'], label=INDEX_NAME, color='blue')
         plt.title(f'{INDEX_NAME} NAV 曲线图')
@@ -194,7 +203,8 @@ class SimpleIndexBuilder:
         plt.legend()
         plt.grid(True)
         now = datetime.now().strftime('%Y%m%d_%H%M%S')
-        plot_file = f'{INDEX_NAME}_{now}.png'
+        plot_file = f'plots/{INDEX_NAME}_{now}.png'  # 保存到 plots 目录
+        os.makedirs('plots', exist_ok=True)  # 确保目录存在
         plt.savefig(plot_file)
         plt.close()
         print(f"曲线图已保存到: {plot_file}")
