@@ -21,7 +21,8 @@ def fetch_index_volume(symbol_code, index_name):
     """
     try:
         # 获取指数日线历史数据
-        # adjust="qfq" 参数可选，对指数意义不大，但为保持一致性或方便未来扩展
+        # adjust="qfq" 参数可选
+        # 注意: 如果 akshare 接口不稳定，可能需要尝试不同的数据源函数
         df = ak.index_zh_a_hist(symbol=symbol_code, period="daily", start_date="", end_date="", adjust="qfq")
         
         if df.empty:
@@ -32,7 +33,6 @@ def fetch_index_volume(symbol_code, index_name):
         # akshare返回的日期列名为 '日期'，成交量列名为 '成交量'
         latest_data = df.iloc[-1]
         
-        # akshare的成交量单位通常是手或股，具体取决于数据源，这里标注为 '成交量'
         return {
             '指数代码': symbol_code,
             '交易日期': latest_data['日期'].strftime('%Y%m%d'),
@@ -53,6 +53,7 @@ def main():
     
     # 构造保存目录 (年月)
     year_month = now.strftime('%Y%m')
+    # 使用绝对路径，确保在 GitHub Actions 中正确创建目录
     output_dir = os.path.join(os.getcwd(), year_month)
     
     # 确保目录存在
@@ -74,14 +75,10 @@ def main():
         time.sleep(1)
     
     if results:
-        # 转换为 DataFrame 并排序
+        # 转换为 DataFrame 
         df_results = pd.DataFrame(results)
-        df_results = df_results[['交易日期', '指数代码', '指数名称', '成交量']]
         
-        # 保存到 CSV 文件
-        # 注意：akshare返回的成交量单位，如果需要转换为“手”，可能需要除以100
-        # 如果 akshare 返回的是“股”，则：成交量(手) = 成交量 / 100
-        # 为保持数据源的原始性，这里直接保存为 '成交量'，用户可自行在分析时转换。
+        # akshare的成交量单位通常是股，转换为“手”需要除以100
         df_results['成交量(手)'] = df_results['成交量'] / 100
         df_results = df_results.drop(columns=['成交量']) # 删除原始成交量列
         
