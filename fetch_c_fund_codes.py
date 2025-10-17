@@ -71,7 +71,7 @@ def filter_c_funds(fund_data):
             
     return c_fund_codes
 
-def save_codes_to_file(codes, filename="C类.txt"):
+def save_codes_to_file(codes, filename="C0类.txt"):
     """将基金代码列表保存到文本文件中。"""
     try:
         with open(filename, 'w', encoding='utf-8') as f:
@@ -92,6 +92,7 @@ if __name__ == "__main__":
         c_codes = filter_c_funds(all_funds)
         
         # 3. 保存结果
+        # 注意：这里将结果保存为 C0类.txt
         save_codes_to_file(c_codes, "C0类.txt")
     
     end_time = time.time()
