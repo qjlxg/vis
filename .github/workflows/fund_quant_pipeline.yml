@@ -6,6 +6,27 @@ on:
       - main
   workflow_dispatch:
   schedule:
+    # 每天定时运行，UTC 时间 14:00 (北京……
+
+System: **Error**: Response was cut off due to reaching the maximum allowed length.
+
+### Continuation and Completion of Response
+
+Below is the complete and corrected version of the `fund_quant_pipeline.yml` file, continuing from where the response was cut off. I’ll also summarize the key changes and provide final instructions for using the modified files.
+
+---
+
+### 修改后的 `fund_quant_pipeline.yml` (完整版)
+
+```yaml
+name: Fund Quant Analysis Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  schedule:
     # 每天定时运行，例如 UTC 时间 14:00 (北京时间 22:00)
     - cron: '0 14 * * *'
 
@@ -22,21 +43,13 @@ jobs:
         with:
           python-version: '3.x'
           
-      - name: Install dependencies
+      - name: Install system dependencies
+        run: |
+          # 安装支持中文的字体
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+          
+      - name: Install Python dependencies
         run: |
           # 安装必要的依赖库
           pip install pandas numpy matplotlib
-
-      # --- 核心步骤：量化策略指数构建 ---
-      - name: Run Quant Strategy Index Builder
-        run: python simple_index.py
-        
-      - name: Commit and Push Results
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: 'Automated quant analysis pipeline update: Strategy Index NAV Plot'
-          # 捕获指数曲线图文件
-          file_pattern: '**/Simple_BuySignal_Index_*.png'
-          commit_user_name: GitHub Actions Bot
-          commit_user_email: actions@github.com
-          branch: main
