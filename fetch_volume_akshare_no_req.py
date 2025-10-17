@@ -1,70 +1,70 @@
-import requests
-import json
+import akshare as ak
 import pandas as pd
 import datetime
 import os
 import time
 
-# 需要获取的指数代码及其在东方财富接口中的标识 (市场代码.指数代码)
-# 接口的fs参数定义了数据来源，这里使用 m:1+t:2 (A股指数) 和 m:1+t:23 (A股指数)
-# 指数代码 (f12) 和 市场代码 (f13) 决定了数据请求
+# 需要获取的指数代码及其在 akshare 中的代码
 INDEX_CODES = {
-    "000001": {"name": "上证指数", "market": "1"},  # 上交所 1.000001
-    "399001": {"name": "深证成指", "market": "0"},  # 深交所 0.399001
-    "399006": {"name": "创业板指", "market": "0"},  # 深交所 0.399006
-    "000300": {"name": "沪深300",  "market": "1"}   # 上交所 1.000300
+    "sh000001": "上证指数",     # 000001
+    "sz399001": "深证成指",     # 399001
+    "sz399006": "创业板指",     # 399006
+    "sh000300": "沪深300"      # 000300
 }
 
-def fetch_index_volume(code, market, name):
-    """
-    通过东方财富指数接口获取指定指数的最新成交量。
-    """
-    try:
-        # 东方财富实时行情接口 (与你提供的接口类似，但针对指数)
-        url = (
-            "http://push2.eastmoney.com/api/qt/ulist.np/get?"
-            "fltt=2&fields=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f20,f21"
-            "&secids={0}.{1}"  # 格式: 市场代码.指数代码
-            "&_={2}"
-        ).format(market, code, int(time.time() * 1000))
-        
-        r = requests.get(url, timeout=10)
-        r.encoding = 'utf-8'
-        content_dict = r.json()
+# 设定获取历史数据的天数（交易日）
+DAYS_TO_FETCH = 10 
 
-        data = content_dict.get('data', {}).get('diff', [])
+def fetch_index_historical_volume(symbol_code, index_name):
+    """
+    使用 akshare 获取指定指数代码最近 N 个交易日的成交量数据。
+    """
+    # 计算开始日期：从今天往前推 N 个交易日，使用一个足够长的跨度（例如 20 天）来确保获取到至少 10 个交易日的数据。
+    end_date_str = datetime.datetime.now().strftime('%Y%m%d')
+    start_date = datetime.datetime.now() - datetime.timedelta(days=DAYS_TO_FETCH * 2) 
+    start_date_str = start_date.strftime('%Y%m%d')
+    
+    try:
+        # 使用 index_zh_a_hist 接口获取历史数据
+        # 移除 'adjust' 参数，并使用明确的日期范围
+        df = ak.index_zh_a_hist(
+            symbol=symbol_code, 
+            period="daily", 
+            start_date=start_date_str, 
+            end_date=end_date_str
+        )
         
-        if not data:
-            print(f"  -> 接口未返回 {name} ({code}) 的数据。")
+        if not isinstance(df, pd.DataFrame) or df.empty:
+            print(f"  -> 未找到 {index_name} ({symbol_code}) 的数据。")
             return None
         
-        # 假设返回列表的第一个元素就是所需数据
-        index_data = data[0]
+        # 确保数据按日期升序排列，并取最新的 N 条记录
+        df = df.sort_values(by='日期', ascending=True).tail(DAYS_TO_FETCH)
         
-        # f5: 成交量 (手)
-        volume = index_data.get('f5')
+        # 提取所需列，并重命名
+        df_result = df.rename(columns={'日期': '交易日期', '成交量': '成交量(股)'})
         
-        # f1: 最新时间戳 (通常是 Unix 时间戳，但可能不稳定，这里不取)
-        # 简单使用运行脚本的日期作为数据的交易日期（需在收盘后运行）
-        today = datetime.datetime.now().strftime('%Y%m%d')
-
-        if volume is None:
-             print(f"  -> 成功获取数据但缺少成交量 (f5) 字段。")
-             return None
+        # 添加指数名称和代码
+        df_result['指数代码'] = symbol_code
+        df_result['指数名称'] = index_name
         
-        return {
-            '交易日期': today,
-            '指数代码': f"{market}.{code}",
-            '指数名称': name,
-            '成交量(手)': volume
-        }
+        # 计算成交量(手)
+        # akshare 的成交量通常是股，需要除以 100 转换为手
+        df_result['成交量(手)'] = df_result['成交量(股)'] / 100
+        
+        # 格式化日期，并选择最终列
+        df_result['交易日期'] = df_result['交易日期'].dt.strftime('%Y%m%d')
+        df_result = df_result[['交易日期', '指数代码', '指数名称', '成交量(手)']]
+        
+        return df_result
+        
     except Exception as e:
-        print(f"获取 {name} ({code}) 数据时出错: {e}")
+        print(f"获取 {index_name} ({symbol_code}) 历史数据时出错: {e}")
         return None
 
 def main():
-    """主函数，获取所有指数数据并保存到指定路径"""
-    print("开始获取指数成交量数据...")
+    """主函数，获取所有指数的历史数据并合并保存"""
+    print(f"开始获取最近 {DAYS_TO_FETCH} 个交易日的指数成交量数据...")
     
     now = datetime.datetime.now()
     timestamp_str = now.strftime('%Y%m%d_%H%M%S')
@@ -72,39 +72,39 @@ def main():
     # 构造保存目录 (年月)
     year_month = now.strftime('%Y%m')
     output_dir = os.path.join(os.getcwd(), year_month)
-    
-    # 确保目录存在
     os.makedirs(output_dir, exist_ok=True)
     
     # 构造文件名
-    output_filename = f"index_volume_{timestamp_str}.csv"
+    output_filename = f"index_volume_history_{timestamp_str}.csv"
     output_path = os.path.join(output_dir, output_filename)
     
-    results = []
+    all_results = []
     
-    for code, info in INDEX_CODES.items():
-        name = info['name']
-        market = info['market']
-        print(f"正在获取 {name} ({market}.{code})...")
+    for code, name in INDEX_CODES.items():
+        print(f"正在获取 {name} ({code}) 历史数据...")
         
-        # 调用爬虫函数
-        data = fetch_index_volume(code, market, name)
+        # 调用获取历史数据的函数
+        df_data = fetch_index_historical_volume(code, name)
         
-        if data:
-            results.append(data)
+        if df_data is not None and not df_data.empty:
+            all_results.append(df_data)
         
-        # 增加延迟以避免对接口造成过大压力
-        time.sleep(1) 
+        # 增加延迟
+        time.sleep(2) 
     
-    if results:
-        df_results = pd.DataFrame(results)
-        df_results = df_results[['交易日期', '指数代码', '指数名称', '成交量(手)']]
-
+    if all_results:
+        # 合并所有指数的历史数据到一个 DataFrame
+        final_df = pd.concat(all_results, ignore_index=True)
+        
+        # 按交易日期排序，便于查看
+        final_df = final_df.sort_values(by=['交易日期', '指数代码'])
+        
         # 保存到 CSV 文件
-        df_results.to_csv(output_path, index=False, encoding='utf-8')
+        final_df.to_csv(output_path, index=False, encoding='utf-8')
         print(f"\n数据已成功保存到: {output_path}")
+        print(f"总共获取了 {len(final_df)} 条历史数据记录。")
     else:
-        print("\n所有指数数据获取失败，未生成文件。")
+        print("\n所有指数历史数据获取失败，未生成文件。")
 
 if __name__ == "__main__":
     main()
