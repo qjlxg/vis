@@ -187,6 +187,40 @@ class SimpleIndexBuilder:
             current_nav = prev_nav * (1 + strategy_return)
             index_nav.append(current_nav)
 
+        # 确保 DataFrame 的长度与 common_dates 匹配 (i=0 被跳过，所以需要 i-1 个数据，再加上起始值)
+        # 实际上，index_nav 应该比 common_dates 少一个元素，因为它是从起始值开始的
+        # 但是在循环中 i=0 被跳过，所以 index_nav[0] 是 STARTING_NAV，对应 common_dates[0]
+        # index_nav[1] 是 common_dates[1] 的值，以此类推
+        # 修正：index_nav[0] 对应 common_dates[0]，其值是 STARTING_NAV。
+        # 第一次计算发生在 i=1 时，计算 common_dates[1] 的 NAV
+        
+        # 为了保持日期和净值一一对应，起始净值应该对应第一个计算出的 NAV 的前一个日期（如果需要的话）
+        # 这里，我们让 common_dates 成为 index，index_nav 应该比 common_dates 少一个元素
+        # 修正：我们应该从第一个日期开始计算 NAV，并使用前一个日期的信号
+        
+        # 重新构建 index_nav，使其长度与 self.common_dates 相同
+        index_nav = [STARTING_NAV] # 重新初始化，第一个值是起始净值，对应第一个日期
+        
+        for i, date in enumerate(self.common_dates):
+            if i == 0:
+                continue
+            
+            # 使用前一日的信号进行交易决策，计算当日的收益
+            prev_date = self.common_dates[i-1]
+            prev_signals = self.signals_df.loc[prev_date]
+            buy_codes = prev_signals[prev_signals.isin(['强买入', '弱买入'])].index.tolist()
+
+            strategy_return = RISK_FREE_RATE_DAILY  # 默认无风险利率
+            if buy_codes:
+                current_holdings = buy_codes
+                holdings_returns = self.returns_df.loc[date, current_holdings].dropna()
+                if not holdings_returns.empty:
+                    strategy_return = holdings_returns.mean()
+
+            prev_nav = index_nav[-1]
+            current_nav = prev_nav * (1 + strategy_return)
+            index_nav.append(current_nav)
+            
         index_df = pd.DataFrame({'NAV': index_nav}, index=self.common_dates)
         return index_df
 
@@ -208,6 +242,16 @@ class SimpleIndexBuilder:
         plt.savefig(nav_plot_file)
         plt.close()
         print(f"NAV曲线图已保存到: {nav_plot_file}")
+        return nav_plot_file
+
+    def save_nav_csv(self, index_df):
+        """保存 NAV 数据为 CSV"""
+        now = datetime.now().strftime('%Y%m%d_%H%M%S')
+        csv_file = f'plots/{INDEX_NAME}_NAV_{now}.csv'
+        os.makedirs('plots', exist_ok=True)
+        index_df.to_csv(csv_file, encoding='utf-8')
+        print(f"NAV 数据已保存到: {csv_file}")
+        return csv_file
 
     def build_signal_count_index(self):
         """统计信号数量作为指数值"""
@@ -239,14 +283,30 @@ class SimpleIndexBuilder:
         plt.savefig(signal_plot_file)
         plt.close()
         print(f"信号数量曲线图已保存到: {signal_plot_file}")
+        return signal_plot_file
+
+    def save_signal_count_csv(self, index_df):
+        """保存信号数量数据为 CSV"""
+        now = datetime.now().strftime('%Y%m%d_%H%M%S')
+        csv_file = f'plots/{INDEX_NAME}_Signal_Count_{now}.csv'
+        os.makedirs('plots', exist_ok=True)
+        index_df.to_csv(csv_file, encoding='utf-8')
+        print(f"信号数量数据已保存到: {csv_file}")
+        return csv_file
 
     def run(self):
         if not self.load_and_preprocess_data():
             return
+            
+        # 1. NAV 指数
         nav_index_df = self.build_index()
         self.plot_nav_curve(nav_index_df)
+        self.save_nav_csv(nav_index_df) # 新增：保存 NAV CSV
+
+        # 2. 信号数量指数
         signal_count_df = self.build_signal_count_index()
         self.plot_signal_count_curve(signal_count_df)
+        self.save_signal_count_csv(signal_count_df) # 新增：保存信号数量 CSV
 
 if __name__ == '__main__':
     builder = SimpleIndexBuilder()
