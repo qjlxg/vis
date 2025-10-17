@@ -5,7 +5,6 @@ import os
 import time
 
 # 需要获取的指数代码及其在 akshare 中的代码
-# akshare 获取指数数据时，通常需要完整的市场标识
 INDEX_CODES = {
     "sh000001": "上证指数",     # 000001
     "sz399001": "深证成指",     # 399001
@@ -16,14 +15,12 @@ INDEX_CODES = {
 def fetch_index_volume(symbol_code, index_name):
     """
     使用 akshare 获取指定指数代码最近一个交易日的成交量数据
-    symbol_code: akshare使用的指数代码 (例如: 'sh000001')
-    index_name: 指数名称 (例如: '上证指数')
     """
     try:
-        # 获取指数日线历史数据
-        # adjust="qfq" 参数可选
-        # 注意: 如果 akshare 接口不稳定，可能需要尝试不同的数据源函数
-        df = ak.index_zh_a_hist(symbol=symbol_code, period="daily", start_date="", end_date="", adjust="qfq")
+        # 修正：移除 'adjust="qfq"' 参数，因为它在新版本中不再被支持。
+        # 仅保留 symbol, period, start_date, end_date 参数。
+        # start_date="" 和 end_date="" 表示获取所有历史数据（即最近数据）
+        df = ak.index_zh_a_hist(symbol=symbol_code, period="daily", start_date="", end_date="")
         
         if df.empty:
             print(f"未找到 {index_name} ({symbol_code}) 的数据。")
@@ -35,6 +32,7 @@ def fetch_index_volume(symbol_code, index_name):
         
         return {
             '指数代码': symbol_code,
+            # 确保日期格式化正确
             '交易日期': latest_data['日期'].strftime('%Y%m%d'),
             '指数名称': index_name,
             '成交量': latest_data['成交量']
@@ -53,7 +51,6 @@ def main():
     
     # 构造保存目录 (年月)
     year_month = now.strftime('%Y%m')
-    # 使用绝对路径，确保在 GitHub Actions 中正确创建目录
     output_dir = os.path.join(os.getcwd(), year_month)
     
     # 确保目录存在
@@ -72,7 +69,8 @@ def main():
             results.append(data)
         
         # 增加延迟以避免对数据源接口造成过大压力
-        time.sleep(1)
+        # 在 GitHub Actions 中建议保留
+        time.sleep(1) 
     
     if results:
         # 转换为 DataFrame 
