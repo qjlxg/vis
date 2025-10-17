@@ -1,4 +1,4 @@
-name: Fetch Stock Index Volume (No Requirements.txt)
+name: Fetch Historical Index Volume (Akshare)
 
 on:
   # 定时任务，每天 UTC 时间 8:00 运行 (北京时间 16:00)
@@ -10,12 +10,12 @@ on:
 jobs:
   fetch_and_commit:
     runs-on: ubuntu-latest
+    timeout-minutes: 5 
 
     steps:
       # 1. 检出代码
       - name: Checkout repository
         uses: actions/checkout@v4
-        # 增加 token 权限，以便后续步骤可以提交新的文件
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -25,17 +25,17 @@ jobs:
         with:
           python-version: '3.x'
 
-      # 3. 安装依赖 (替代 requirements.txt)
+      # 3. 安装依赖 (不使用 requirements.txt)
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # 直接安装 akshare 和 pandas
+          # 直接安装所需的 akshare 和 pandas 库
           pip install akshare pandas
       
       # 4. 运行 Python 脚本
       - name: Run Python script
-        # 运行你修改后的脚本文件名
-        run: python fetch_volume_akshare_no_req.py
+        # 运行获取历史数据的脚本
+        run: python fetch_historical_volume_akshare.py
       
       # 5. 提交数据文件到仓库
       - name: Commit files
@@ -45,9 +45,9 @@ jobs:
           
           # 检查是否有新的 CSV 文件生成，如果有则提交
           if [[ -n $(git status --porcelain) ]]; then
-            echo "发现新数据文件，开始提交..."
+            echo "发现新历史数据文件，开始提交..."
             git add .
-            git commit -m "自动更新: 添加指数成交量数据 - $(date +%Y-%m-%d)"
+            git commit -m "自动更新: 添加指数历史成交量数据 - $(date +%Y-%m-%d)"
             git push
           else
             echo "没有新的数据文件生成或文件内容没有变化，跳过提交。"
