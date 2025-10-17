@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
-  schedule:
-    # 每天定时运行，UTC 时间 14:00 (北京时间 22:00)
-    - cron: '0 14 * * *'
+    paths: # <--- 关键修改点：限制触发路径
+      - 'fund_quant_pipeline.yml'
+      - 'simple_index.py'
+  # workflow_dispatch: # <--- 移除此行，不再手动触发
+  # schedule: # <--- 移除此部分，不再定时触发
+  #   - cron: '0 14 * * *'
 
 jobs:
   run_analysis:
@@ -22,28 +24,25 @@ jobs:
         with:
           python-version: '3.10'
           
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y fonts-noto-cjk
-          # 验证字体安装
-          ls /usr/share/fonts/truetype/noto-cjk/ || ls /usr/share/fonts/truetype/noto/
-          
+      # 移除字体相关步骤，因为您要求不生成图片
+      # - name: Install system dependencies (Skipped)
+      
       - name: Install Python dependencies
         run: |
-          pip install pandas==2.2.2 numpy==1.26.4 matplotlib==3.9.2
+          # 只保留了 pandas 和 numpy，移除了 matplotlib
+          pip install pandas==2.2.2 numpy==1.26.4
           
       - name: Run Quant Strategy Index Builder
         run: |
           python simple_index.py
           # 验证文件生成
-          ls -l plots/ || echo "No plots generated"
+          ls -l plots/ || echo "No data generated"
         
       - name: Commit and Push Results
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'Automated quant analysis pipeline update: NAV and Signal Count Plots/CSV'
-          file_pattern: 'plots/*.png plots/*.csv' # <-- 修改点：包含 CSV 文件
+          commit_message: 'Automated quant analysis pipeline update: NAV and Signal Count Data (CSV only)'
+          file_pattern: 'plots/*.csv' # 只提交 CSV 文件
           commit_user_name: GitHub Actions Bot
           commit_user_email: actions@github.com
           branch: main
