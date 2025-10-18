@@ -10,7 +10,7 @@ import re
 from datetime import datetime, timedelta
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_message
 import concurrent.futures
-import json # 尽管不再用于缓存页码，但仍保留以防万一其他代码使用
+import json 
 
 # 定义文件路径和目录
 INPUT_FILE = 'C类.txt'
@@ -26,11 +26,9 @@ HEADERS = {
 REQUEST_TIMEOUT = 30 
 REQUEST_DELAY = 0.5  # 初始延迟，动态调整
 MAX_CONCURRENT = 5  # 最大并发基金数量
-FORCE_UPDATE = False # 字段保留，但逻辑中已不再使用
+FORCE_UPDATE = False
 
-# ****** 关键修改 ******
-# 暂时限制每次运行最多处理 10 个基金，用于调试上次运行中大量失败的问题。
-# 调试完成后，请将其改回 0
+# 调试修复后的代码，暂时限制处理数量
 MAX_FUNDS_PER_RUN = 10  
 
 # 检查基金数据新鲜度的阈值（不再用于强制从头开始，逻辑已简化）
@@ -68,20 +66,20 @@ def get_all_fund_codes(file_path):
 # ****** 核心修改：新的增量起始点判断逻辑 ******
 
 def load_latest_date(fund_code):
-    """从本地 CSV 文件中读取现有最新日期"""
+    """
+    [修复点 A]：从本地 CSV 文件中读取现有最新日期，并返回纯 Python 的 datetime.date 对象
+    """
     output_path = os.path.join(OUTPUT_DIR, f"{fund_code}.csv")
     if os.path.exists(output_path):
         try:
-            # 确保在读取时正确解析日期
             df = pd.read_csv(output_path, parse_dates=['date'], encoding='utf-8')
             if not df.empty:
-                # max() 获取最新日期，normalize() 移除时间分量
-                latest_date = df['date'].max().normalize()
+                # 关键修复：使用 .date() 获取纯 Python 的 date 对象，而不是 .normalize()
+                latest_date = df['date'].max().date() 
                 print(f"  -> 基金 {fund_code} 现有最新日期: {latest_date.strftime('%Y-%m-%d')}")
                 return latest_date
         except Exception as e:
             print(f"  -> 加载 {fund_code} CSV 失败: {e}")
-            # 文件损坏，返回 None 触发从头抓取
     return None  # 无缓存，或加载失败，从头抓取
 
 
@@ -115,9 +113,8 @@ async def fetch_net_values(fund_code, session, semaphore):
         first_run = True
         dynamic_delay = REQUEST_DELAY
         
-        # ****** 核心逻辑：获取本地最新日期 ******
         loop = asyncio.get_event_loop()
-        # 在线程中同步读取 CSV
+        # 在线程中同步读取 CSV，latest_date 此时是 datetime.date 对象
         latest_date = await loop.run_in_executor(None, load_latest_date, fund_code) 
 
 
@@ -137,6 +134,11 @@ async def fetch_net_values(fund_code, session, semaphore):
                     records_match = re.search(r'records:(\d+)', text)
                     total_records = int(records_match.group(1)) if records_match else '未知'
                     print(f"   基金 {fund_code} 信息：总页数 {total_pages}，总记录数 {total_records}。")
+                    
+                    if total_records == '未知' or int(total_records) == 0:
+                        print(f"   基金 {fund_code} [跳过]：API 返回总记录数为 0 或未知。")
+                        return fund_code, "API返回记录数为0或代码无效"
+                        
                     first_run = False
                 
                 table = soup.find('table') 
@@ -162,16 +164,16 @@ async def fetch_net_values(fund_code, session, semaphore):
                         continue
                         
                     try:
-                        # 转换日期，并移除时间分量进行比较
-                        date = datetime.strptime(date_str, '%Y-%m-%d').normalize()
+                        # [修复点 B]：转换日期，并获取纯 Python 的 date 对象进行比较
+                        date = datetime.strptime(date_str, '%Y-%m-%d').date() 
                         
                         # ****** 核心停止条件 ******
-                        # 如果本地有最新日期，且当前记录日期 <= 最新日期，则停止
-                        if latest_date and date <= latest_date:
+                        # 此时 date 和 latest_date 都是 datetime.date 对象，可以安全比较
+                        if latest_date and date <= latest_date: 
                             stop_fetch = True
                             break # 退出 for row 循环
                             
-                        # 如果是新数据，添加到列表
+                        # 如果是新数据，添加到列表 (注意：添加到列表时使用原始的 date_str 字符串，方便 DataFrame 处理)
                         page_records.append({'date': date_str, 'net_value': net_value_str})
                     except ValueError:
                         continue # 日期或净值格式错误，跳过该行
@@ -193,6 +195,7 @@ async def fetch_net_values(fund_code, session, semaphore):
                 print(f"   基金 {fund_code} [错误]：请求 API 时发生网络错误 (超时/连接) 在第 {page_index} 页: {e}")
                 return fund_code, f"网络错误: {e}"
             except Exception as e:
+                # 捕获其他所有错误，包括我们修复的日期处理错误
                 print(f"   基金 {fund_code} [错误]：处理数据时发生意外错误在第 {page_index} 页: {e}")
                 return fund_code, f"数据处理错误: {e}"
             
@@ -212,7 +215,6 @@ def save_to_csv(fund_code, data):
 
     try:
         new_df['net_value'] = pd.to_numeric(new_df['net_value'], errors='coerce').round(4)
-        # 日期已经是字符串格式，直接转为 datetime 对象
         new_df['date'] = pd.to_datetime(new_df['date'], errors='coerce')
         new_df.dropna(subset=['date', 'net_value'], inplace=True)
     except Exception as e:
@@ -255,7 +257,6 @@ async def fetch_all_funds(fund_codes):
     loop = asyncio.get_event_loop()
 
     async with ClientSession() as session:
-        # 创建所有异步抓取任务 
         fetch_tasks = [fetch_net_values(fund_code, session, semaphore) for fund_code in fund_codes]
         
         success_count = 0
