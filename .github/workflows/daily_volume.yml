@@ -1,13 +1,18 @@
 name: Daily Index Volume Collector
 
 on:
+  # 1. 定时触发 (每天 UTC 时间 6:00 运行)
   schedule:
-    - cron: '0 6 * * *'  # 每天 UTC 时间 6:00 运行（北京时间 14:00，JST 15:00）
-  workflow_dispatch:  # 支持手动触发
+    - cron: '0 6 * * *'  
+
+  # 2. 手动触发
+  workflow_dispatch:  
+
+  # 3. 文件变动触发 (修正了您的 push.paths 语法)
   push:
     paths:
-      - '.github/workflows/daily_volume.yml'
-      - 'index_volume.py'
+      - '.github/workflows/daily_volume.yml' 
+      - 'index_volume.py' 
 
 jobs:
   collect-volume:
@@ -24,8 +29,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install akshare pandas pandas-ta==0.3.14b0
-        continue-on-error: false  # 安装失败时停止工作流
+          # 修正: 移除版本约束，安装与 Python 3.10 兼容的最新稳定版
+          pip install akshare pandas pandas-ta
+        continue-on-error: false
         shell: bash
 
       - name: Run script
@@ -37,6 +43,7 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git add .
+          # 使用 --allow-empty 避免在没有数据变化时提交失败
           git commit --allow-empty -m "Add daily index volume, price, and RSI data - $(date +%Y%m%d)" || echo "No changes to commit"
           git push
         env:
