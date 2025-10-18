@@ -13,8 +13,8 @@ import concurrent.futures
 import json
 import logging
 
-# 配置日志（可选，用于查看详细的解析错误）
-logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
+# 配置日志：将 WARNING 级别提升到 INFO，以便您能看到更多的过程信息和错误警告
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # 定义文件路径和目录
@@ -37,7 +37,7 @@ MAX_FUNDS_PER_RUN = 0
 PAGE_SIZE = 20
 
 # --------------------------------------------------------------------------------------
-# 辅助函数：JS变量提取和解析 (最终优化)
+# 辅助函数：JS变量提取和解析 (最终优化 V2)
 # --------------------------------------------------------------------------------------
 
 def extract_simple_var(text, var_name):
@@ -54,58 +54,73 @@ def extract_simple_var(text, var_name):
 def extract_json_var(text, var_name):
     """
     提取复杂的 JSON/JS Object Literal 变量，如 apidata, Data_fund_info。
-    使用非贪婪匹配来确保捕获到正确的结束位置。
+    使用更鲁棒的正则，捕获到第一个分号为止。
     """
-    # 匹配 var var_name = [ { ... } ] ; 或 var var_name = { ... } ;
-    # 注意：使用 .*? 配合 [;] 结束符，确保不会过度匹配
-    match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*(\[.*?\]|\{.*?\}).*?;', text, re.DOTALL)
+    # 匹配 var var_name = ... ;
+    # (.*?) 非贪婪匹配直到遇到下一个分号 ;
+    # 允许变量内容前面有 /*...*/ 注释
+    # 匹配模式：var 变量名 = 任意内容（直到第一个分号）
+    match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*(.*?)\s*;', text, re.DOTALL)
     if match:
         data_str = match.group(1).strip()
-        # 清理可能存在的 JS 注释、分号等尾部不必要符号
-        data_str = re.sub(r'/\*.*$', '', data_str, re.DOTALL).strip().rstrip(';')
+        
+        # 强制清理尾部多余的 JS 注释，例如：/*申购赎回*/ 或 /*...*/
+        # 匹配 */ 后面直到字符串结束的任意内容，并清除
+        data_str = re.sub(r'\s*/\*.*$', '', data_str, re.DOTALL).strip()
+        
+        # 确保数据以 [ 或 { 结尾
+        if data_str.startswith('[') and data_str.endswith(']'):
+            return data_str
+        elif data_str.startswith('{') and data_str.endswith('}'):
+             return data_str
+        
+        logger.warning(f"变量 {var_name} 内容未以 [{{ 或 }}] 结尾。内容片段: {data_str[:50]}...")
+        # 尝试修复，如果内容是合法的，让 clean_and_parse_js_object 处理
         return data_str
+        
     return None
 
 def clean_and_parse_js_object(js_text):
     """
-    核心解析函数：清理 JS 对象字面量中的非标准 JSON 格式（如无引号键名），并尝试解析为 Python 字典。
+    核心解析函数：清理 JS 对象字面量中的非标准 JSON 格式（无引号键名），并尝试解析为 Python 字典。
     """
     if not js_text:
         return {}
-
-    # 1. 移除外层数组中括号 (Data_fund_info 常见结构是 [ {...} ])
-    if js_text.startswith('[') and js_text.endswith(']'):
-        js_text = js_text.strip()[1:-1].strip()
-        if not js_text:
-            return {}
-
+    
     # 2. **关键修复：** 替换所有单引号为双引号
     text = js_text.replace("'", '"')
     
-    # 3. 替换 JS 的 true/false/null 为标准 JSON 的 true/false/null (已经默认是小写，这步主要是规范化)
+    # 3. 替换 JS 的 true/false/null 为标准 JSON 的 true/false/null
     text = text.replace('true', 'true').replace('false', 'false').replace('null', 'null')
     
     # 4. **核心修复：** 将无引号的键名 (key:) 替换为带双引号的键名 ("key":)
-    # 匹配：{ 或 , 之后跟着一个或多个字母数字下划线，再跟着 :
-    # (\s*[\{\,]\s*) 匹配定界符 { 或 ,
-    # ([a-zA-Z_]\w*) 捕获合法的 JS/Python 标识符作为键名
     def replace_unquoted_keys(match):
         # match.group(1) 是定界符，match.group(2) 是键名
         return match.group(1) + '"' + match.group(2) + '":'
     
-    # 注意：这个替换必须在值中可能包含冒号之前完成，否则可能出错。
+    # 匹配 { 或 , 之后跟着一个或多个字母数字下划线，再跟着 :
     text = re.sub(r'([\{\,]\s*)([a-zA-Z_]\w*)\s*:', replace_unquoted_keys, text)
 
     try:
         data = json.loads(text)
+        
+        # 处理 Data_fund_info 的常见格式：数组包含单个对象 [ {...} ]
+        if isinstance(data, list) and data and isinstance(data[0], dict):
+             logger.info("成功从单元素数组中提取对象")
+             return data[0]
+
         return data
         
     except json.JSONDecodeError as e:
-        logger.warning(f"JSON 解析失败，尝试清理注释: {e}")
-        # 失败后，尝试移除注释再解析 (例如 apidata 中可能包含 // 注释)
+        logger.warning(f"JSON 解析失败: {e}. 尝试移除注释并重新尝试。")
+        
+        # 失败后，尝试移除注释再解析
         text_no_comments = re.sub(r'//.*?\n|/\*.*?\*/', '', text, flags=re.DOTALL)
         try:
             data = json.loads(text_no_comments)
+            # 再次处理数组情况
+            if isinstance(data, list) and data and isinstance(data[0], dict):
+                 return data[0]
             return data
         except json.JSONDecodeError as e_final:
             logger.error(f"最终 JSON 解析失败: {e_final}. 原始文本片段: {text_no_comments[:100]}...")
@@ -160,11 +175,12 @@ async def fetch_fund_info(fund_code, session, semaphore):
             
             manager_name = '未知'
             # 从 data_info 中安全提取基金经理名称 (它通常是包含经理信息的数组)
-            if 'FundManager' in data_info and isinstance(data_info['FundManager'], list) and data_info['FundManager']:
-                # 提取第一个基金经理的名称
-                manager_name = data_info['FundManager'][0].get('name', '未知')
-            elif 'FundManager' in data_info and isinstance(data_info['FundManager'], str):
-                 manager_name = data_info['FundManager']
+            if 'FundManager' in data_info:
+                if isinstance(data_info['FundManager'], list) and data_info['FundManager']:
+                    # 提取第一个基金经理的名称
+                    manager_name = data_info['FundManager'][0].get('name', '未知')
+                elif isinstance(data_info['FundManager'], str) and data_info['FundManager']:
+                     manager_name = data_info['FundManager']
 
             # 基金公司名称可能在 FundCompany 或 jjgs 中
             company_name = data_info.get('FundCompany', data_main.get('jjgs', '未知'))
@@ -199,18 +215,25 @@ async def fetch_fund_info(fund_code, session, semaphore):
                 '申购净值': '未知',
                 '申购报价': '未知',
             }
+            
+            # 检查核心字段是否成功提取
+            if result['基金经理'] != '未知' and result['公司名称'] != '未知':
+                 print(f"    -> 基金 {fund_code} 基本信息抓取成功 (名称: {result['名称']} | 公司: {result['公司名称']} | 经理: {result['基金经理']})")
+            else:
+                 print(f"    -> 基金 {fund_code} 基本信息抓取完成，但核心字段缺失 (经理: {result['基金经理']} | 公司: {result['公司名称']})")
 
-            print(f"    -> 基金 {fund_code} 基本信息抓取成功 (名称: {result['名称']} | 公司: {result['公司名称']} | 经理: {result['基金经理']})")
             return fund_code, result
 
         except Exception as e:
             error_message = str(e)
             print(f"    -> 基金 {fund_code} [信息抓取失败]: {error_message}")
+            logger.error(f"基金 {fund_code} 抓取失败的详情: {e}")
             return fund_code, default_result
 
 # --------------------------------------------------------------------------------------
 # 文件读取、缓存和动态数据抓取逻辑 (其余保持不变)
 # --------------------------------------------------------------------------------------
+
 def get_all_fund_codes(file_path):
     """从 C类.txt 文件中读取基金代码"""
     print(f"尝试读取基金代码文件: {file_path}")
