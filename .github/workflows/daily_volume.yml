@@ -4,6 +4,10 @@ on:
   schedule:
     - cron: '0 6 * * *'  # 每天 UTC 时间 6:00 运行（北京时间 14:00，JST 15:00）
   workflow_dispatch:  # 支持手动触发
+  push:
+    paths:
+      - '.github/workflows/daily_volume.yml'
+      - 'index_volume.py'
 
 jobs:
   collect-volume:
@@ -16,21 +20,24 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'  # 使用 Python 3.10
+          python-version: '3.10'  # 保持 Python 3.10
 
       - name: Install dependencies
         run: |
-          pip install akshare pandas pandas-ta
+          pip install akshare pandas pandas-ta==0.3.14b0
+        continue-on-error: false  # 安装失败时停止工作流
+        shell: bash
 
       - name: Run script
         run: python index_volume.py
+        continue-on-error: false
 
       - name: Commit and push results
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git add .
-          git commit -m "Add daily index volume, price, and RSI data - $(date +%Y%m%d)" || echo "No changes to commit"
+          git commit --allow-empty -m "Add daily index volume, price, and RSI data - $(date +%Y%m%d)" || echo "No changes to commit"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
