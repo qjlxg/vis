@@ -13,7 +13,7 @@ import concurrent.futures
 import json
 import logging
 
-# 配置日志：将 WARNING 级别提升到 INFO，以便您能看到更多的过程信息和错误警告
+# 配置日志：保持 INFO 级别，以便查看详细的提取成功/失败信息
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ MAX_FUNDS_PER_RUN = 0
 PAGE_SIZE = 20
 
 # --------------------------------------------------------------------------------------
-# 辅助函数：JS变量提取和解析 (最终优化 V2)
+# 辅助函数：JS变量提取和解析 (最终优化 V3 - 核心变化)
 # --------------------------------------------------------------------------------------
 
 def extract_simple_var(text, var_name):
@@ -51,38 +51,67 @@ def extract_simple_var(text, var_name):
         return value
     return None
 
-def extract_json_var(text, var_name):
+def extract_js_variable_content(text, var_name):
     """
-    提取复杂的 JSON/JS Object Literal 变量，如 apidata, Data_fund_info。
-    使用更鲁棒的正则，捕获到第一个分号为止。
+    V3 核心：通过括号计数来提取复杂 JS 变量 (Data_fund_info, apidata) 的完整内容，
+    以避免正则在遇到嵌套和注释时提前停止。
     """
-    # 匹配 var var_name = ... ;
-    # (.*?) 非贪婪匹配直到遇到下一个分号 ;
-    # 允许变量内容前面有 /*...*/ 注释
-    # 匹配模式：var 变量名 = 任意内容（直到第一个分号）
-    match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*(.*?)\s*;', text, re.DOTALL)
-    if match:
-        data_str = match.group(1).strip()
+    # 1. 精确定位到变量赋值的起始位置
+    start_match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*', text)
+    if not start_match:
+        return None
+    
+    start_index = start_match.end()
+    
+    # 2. 找到变量内容实际开始的位置（跳过空格，定位到 [ 或 {）
+    content_start_index = start_index
+    while content_start_index < len(text) and text[content_start_index].isspace():
+        content_start_index += 1
         
-        # 强制清理尾部多余的 JS 注释，例如：/*申购赎回*/ 或 /*...*/
+    if content_start_index >= len(text):
+        return None
+
+    # 3. 确定变量内容的类型（数组或对象）
+    start_char = text[content_start_index] # 应该是 [ 或 {
+    if start_char not in ['[', '{']:
+        logger.warning(f"变量 {var_name} 不是数组或对象。内容片段: {text[content_start_index:content_start_index+50]}...")
+        # 退回到简单正则提取（提取到第一个分号）
+        match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*(.*?)\s*;', text, re.DOTALL)
+        return match.group(1).strip() if match else None
+
+    end_char = ']' if start_char == '[' else '}'
+    balance = 0
+    content_end_index = -1
+    
+    # 4. 使用计数法找到变量内容的精确结束位置
+    for i in range(content_start_index, len(text)):
+        char = text[i]
+        
+        if char == start_char:
+            balance += 1
+        elif char == end_char:
+            balance -= 1
+        
+        if balance == 0 and i > content_start_index:
+            content_end_index = i
+            break
+            
+    if content_end_index != -1:
+        data_str = text[content_start_index : content_end_index + 1].strip()
+        
+        # 清理可能存在的 JS 注释，例如：/*申购赎回*/
         # 匹配 */ 后面直到字符串结束的任意内容，并清除
         data_str = re.sub(r'\s*/\*.*$', '', data_str, re.DOTALL).strip()
         
-        # 确保数据以 [ 或 { 结尾
-        if data_str.startswith('[') and data_str.endswith(']'):
-            return data_str
-        elif data_str.startswith('{') and data_str.endswith('}'):
-             return data_str
-        
-        logger.warning(f"变量 {var_name} 内容未以 [{{ 或 }}] 结尾。内容片段: {data_str[:50]}...")
-        # 尝试修复，如果内容是合法的，让 clean_and_parse_js_object 处理
+        logger.info(f"成功使用栈计数提取变量 {var_name}")
         return data_str
         
+    logger.warning(f"变量 {var_name} 提取失败：括号不平衡或未找到结束。")
     return None
 
 def clean_and_parse_js_object(js_text):
     """
-    核心解析函数：清理 JS 对象字面量中的非标准 JSON 格式（无引号键名），并尝试解析为 Python 字典。
+    核心解析函数：清理 JS 对象字面量中的非标准 JSON 格式，并尝试解析为 Python 字典。
     """
     if not js_text:
         return {}
@@ -95,10 +124,11 @@ def clean_and_parse_js_object(js_text):
     
     # 4. **核心修复：** 将无引号的键名 (key:) 替换为带双引号的键名 ("key":)
     def replace_unquoted_keys(match):
-        # match.group(1) 是定界符，match.group(2) 是键名
+        # match.group(1) 是定界符 { 或 ,
+        # match.group(2) 是键名 (字母数字下划线开头)
         return match.group(1) + '"' + match.group(2) + '":'
     
-    # 匹配 { 或 , 之后跟着一个或多个字母数字下划线，再跟着 :
+    # 匹配 { 或 , 之后跟着一个合法的 JS 标识符作为键名
     text = re.sub(r'([\{\,]\s*)([a-zA-Z_]\w*)\s*:', replace_unquoted_keys, text)
 
     try:
@@ -106,7 +136,6 @@ def clean_and_parse_js_object(js_text):
         
         # 处理 Data_fund_info 的常见格式：数组包含单个对象 [ {...} ]
         if isinstance(data, list) and data and isinstance(data[0], dict):
-             logger.info("成功从单元素数组中提取对象")
              return data[0]
 
         return data
@@ -134,7 +163,7 @@ def clean_and_parse_js_object(js_text):
 # --------------------------------------------------------------------------------------
 
 async def fetch_fund_info(fund_code, session, semaphore):
-    """异步抓取基金基本信息，包含增强的变量提取逻辑"""
+    """异步抓取基金基本信息，使用 V3 稳定提取逻辑"""
     print(f"    -> 开始抓取基金 {fund_code} 的基本信息")
     url = BASE_URL_INFO_JS.format(fund_code=fund_code)
     
@@ -159,22 +188,23 @@ async def fetch_fund_info(fund_code, session, semaphore):
             fund_rate = extract_simple_var(js_text, 'fund_Rate')
             fund_minsg = extract_simple_var(js_text, 'fund_minsg')
             
-            # 2. 提取并解析 Data_fund_info (基金概况信息，包含经理、公司、成立日期)
+            # 2. 提取并解析 Data_fund_info (使用 V3 稳定提取函数)
             data_info = {}
-            data_info_str = extract_json_var(js_text, 'Data_fund_info')
+            # ********** 核心修改点：使用 extract_js_variable_content **********
+            data_info_str = extract_js_variable_content(js_text, 'Data_fund_info')
             if data_info_str:
                  data_info = clean_and_parse_js_object(data_info_str)
             
-            # 3. 提取并解析 apidata (大型 JSON 块，包含估值和最新净值)
+            # 3. 提取并解析 apidata (使用 V3 稳定提取函数)
             data_main = {}
-            data_main_str = extract_json_var(js_text, 'apidata')
+            # ********** 核心修改点：使用 extract_js_variable_content **********
+            data_main_str = extract_js_variable_content(js_text, 'apidata')
             if data_main_str:
                  data_main = clean_and_parse_js_object(data_main_str)
 
-            # 4. 整理最终结果
+            # 4. 整理最终结果 (提取逻辑不变)
             
             manager_name = '未知'
-            # 从 data_info 中安全提取基金经理名称 (它通常是包含经理信息的数组)
             if 'FundManager' in data_info:
                 if isinstance(data_info['FundManager'], list) and data_info['FundManager']:
                     # 提取第一个基金经理的名称
@@ -182,14 +212,12 @@ async def fetch_fund_info(fund_code, session, semaphore):
                 elif isinstance(data_info['FundManager'], str) and data_info['FundManager']:
                      manager_name = data_info['FundManager']
 
-            # 基金公司名称可能在 FundCompany 或 jjgs 中
             company_name = data_info.get('FundCompany', data_main.get('jjgs', '未知'))
 
             result = {
                 '代码': fund_code_in_data,
                 '名称': fund_name,
                 
-                # 核心信息提取 (优先 Data_fund_info)
                 '基金经理': manager_name,
                 '公司名称': company_name,
                 '成立日期': data_info.get('EstablishDate', data_main.get('qjdate', '未知')),
@@ -198,7 +226,6 @@ async def fetch_fund_info(fund_code, session, semaphore):
                 '发行时间': data_info.get('IssueDate', '未知'),
                 '类型': data_info.get('FundType', fund_type_raw or data_main.get('FTyp', '未知')),
                 
-                # 净值/估值信息 (apidata)
                 '估值日期': data_main.get('gzrq', '未知'),
                 '估值涨幅': data_main.get('gszzl', '未知'),
                 '累计净值': data_main.get('ljjz', '未知'),
@@ -207,11 +234,9 @@ async def fetch_fund_info(fund_code, session, semaphore):
                 '申购状态': data_main.get('sgzt', '未知'),
                 '赎回状态': data_main.get('shzt', '未知'),
                 
-                # 费率/步长
                 '费率': fund_rate if fund_rate else '未知',
                 '申购步长': fund_minsg if fund_minsg else '未知',
                 
-                # 冗余字段
                 '申购净值': '未知',
                 '申购报价': '未知',
             }
