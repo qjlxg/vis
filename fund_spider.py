@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_message
 import concurrent.futures
 import json
-import ast  # 新增：用于安全地解析 Python/JS 对象字面量
+import ast  # 用于安全地解析 Python/JS 对象字面量
 
 # 定义文件路径和目录
 INPUT_FILE = 'C类.txt'
@@ -33,7 +33,171 @@ MAX_FUNDS_PER_RUN = 0
 PAGE_SIZE = 20
 
 # --------------------------------------------------------------------------------------
-# 文件读取和缓存逻辑 (保持不变)
+# 辅助函数：JS变量提取和解析
+# --------------------------------------------------------------------------------------
+
+def extract_simple_var(text, var_name):
+    """提取简单的字符串或数字变量，如 fS_name, fund_Rate"""
+    match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*(.*?);', text, re.DOTALL)
+    if match:
+        value = match.group(1).strip()
+        if (value.startswith('"') and value.endswith('"')) or \
+           (value.startswith("'") and value.endswith("'")):
+            return value[1:-1].lstrip('\ufeff')
+        return value
+    return None
+
+def extract_json_var(text, var_name):
+    """提取复杂的 JSON/JS Object Literal 变量，如 apidata, Data_fund_info"""
+    # 匹配 var var_name = [{...}] ; 或 var var_name = {...} ;
+    # 非贪婪匹配直到遇到结束的 ]} 之一，后面跟着分号
+    match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*([\[\{].*?[\]\}])\s*;', text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return None
+
+def parse_js_object_literal(js_text):
+    """
+    尝试将 JS 对象字面量（键没有引号）转换为 Python 字典。
+    处理对象 { } 或单元素数组 [ { } ] 结构，并抽取基金经理名称。
+    """
+    if not js_text:
+        return None
+
+    # 1. 如果是 [ {...} ] 结构，移除外层数组中括号
+    if js_text.startswith('[') and js_text.endswith(']'):
+        js_text = js_text.strip()[1:-1].strip()
+        if not js_text:
+            return None
+
+    try:
+        # 2. 替换 JS 的 true/false/null 为 Python 的 True/False/None
+        text = js_text.replace('true', 'True').replace('false', 'False').replace('null', 'None')
+        
+        # 3. 将无引号的键名 (key:) 替换为带引号的键名 ("key":)
+        # 此处使用更精确的正则，匹配字母数字下划线开头的键名
+        text = re.sub(r'([\{\,]\s*)([a-zA-Z_]\w*)\s*:', r'\1"\2":', text)
+        
+        # 4. 尝试用 ast.literal_eval 解析 (最安全的方法)
+        data = ast.literal_eval(text)
+
+        # 5. 抽取基金经理名称，使 FundManager 字段变成字符串
+        if isinstance(data, dict):
+            if 'FundManager' in data and isinstance(data['FundManager'], list) and data['FundManager']:
+                # 提取第一个基金经理的名称
+                manager_name = data['FundManager'][0].get('name', '未知')
+                data['FundManager'] = manager_name
+        
+        return data
+        
+    except Exception as e:
+        # 失败时，尝试用标准 JSON 解析器（如果它接近标准 JSON）
+        try:
+             # 清理可能残留的单引号或 JS 注释
+             clean_text = js_text.replace("'", '"')
+             clean_text = re.sub(r'//.*?\n|/\*.*?\*/', '', clean_text, flags=re.DOTALL)
+             return json.loads(clean_text)
+        except:
+             print(f"    [解析错误] 尝试使用 ast/json 解析 JS 对象字面量失败: {e}. 原始文本: {js_text[:50]}...")
+             return None
+
+
+# --------------------------------------------------------------------------------------
+# 基金信息抓取核心逻辑 (已更新)
+# --------------------------------------------------------------------------------------
+
+async def fetch_fund_info(fund_code, session, semaphore):
+    """异步抓取基金基本信息，包含增强的变量提取逻辑"""
+    print(f"    -> 开始抓取基金 {fund_code} 的基本信息")
+    url = BASE_URL_INFO_JS.format(fund_code=fund_code)
+    
+    # 默认值
+    default_result = {
+        '代码': fund_code, '名称': '抓取失败', '类型': '未知', '成立日期': '未知', '基金经理': '未知', 
+        '公司名称': '未知', '基金简称': '未知', '基金类型': '未知', '发行时间': '未知', '估值日期': '未知', 
+        '估值涨幅': '未知', '累计净值': '未知', '单位净值': '未知', '申购净值': '未知', '申购报价': '未知', 
+        '净值日期': '未知', '申购状态': '未知', '赎回状态': '未知', '费率': '未知', '申购步长': '未知'
+    }
+    
+    async with semaphore:
+        try:
+            await asyncio.sleep(REQUEST_DELAY * 0.5)
+            js_text = await fetch_js_page(session, url)
+            
+            # 1. 移除 BOM 字符 (U+FEFF)
+            js_text = js_text.lstrip('\ufeff')
+            
+            # 2. 提取简单变量
+            fund_name = extract_simple_var(js_text, 'fS_name') or '未知名称'
+            fund_code_in_data = extract_simple_var(js_text, 'fS_code') or fund_code
+            fund_type_raw = extract_simple_var(js_text, 'FTyp')
+            fund_rate = extract_simple_var(js_text, 'fund_Rate')
+            fund_minsg = extract_simple_var(js_text, 'fund_minsg')
+            
+            # 3. 提取并解析 apidata (大型 JSON 块，包含估值和最新净值)
+            data_main = {}
+            data_main_str = extract_json_var(js_text, 'apidata')
+            if data_main_str:
+                 # apidata 通常是标准 JSON，但可能包含注释或格式问题，先简单清洗
+                 corrected_json_str = data_main_str.replace("'", '"')
+                 corrected_json_str = re.sub(r'//.*?\n|/\*.*?\*/', '', corrected_json_str, flags=re.DOTALL)
+                 try:
+                     data_main = json.loads(corrected_json_str)
+                 except json.JSONDecodeError:
+                     # 如果标准 JSON 失败，尝试用 JS Object Literal 方式解析
+                     data_main = parse_js_object_literal(data_main_str) or {}
+            
+            # 4. 提取并解析 Data_fund_info (基金概况信息，包含经理、公司、成立日期)
+            data_info = {}
+            data_info_str = extract_json_var(js_text, 'Data_fund_info')
+            if data_info_str:
+                 # Data_fund_info 是典型的 JS Object Literal，使用新的通用解析函数
+                 data_info = parse_js_object_literal(data_info_str) or {}
+
+
+            # 5. 整理最终结果
+            # 注意：所有字段都优先从 Data_fund_info 或 data_main 中获取，fallback 到 '未知'
+            result = {
+                '代码': fund_code_in_data,
+                '名称': fund_name,
+                
+                # 核心信息提取
+                '基金经理': data_info.get('FundManager', '未知'),
+                '公司名称': data_info.get('FundCompany', data_main.get('jjgs', '未知')),
+                '成立日期': data_info.get('EstablishDate', data_main.get('qjdate', '未知')),
+                '基金简称': data_info.get('jjjc', fund_name.split('(')[0].strip() if '(' in fund_name else fund_name.strip()),
+                '基金类型': data_info.get('FundType', fund_type_raw or data_main.get('FTyp', '未知')),
+                '发行时间': data_info.get('IssueDate', '未知'),
+                '类型': data_info.get('FundType', fund_type_raw or data_main.get('FTyp', '未知')),
+                
+                # 净值/估值信息
+                '估值日期': data_main.get('gzrq', '未知'),
+                '估值涨幅': data_main.get('gszzl', '未知'),
+                '累计净值': data_main.get('ljjz', '未知'),
+                '单位净值': data_main.get('dwjz', '未知'),
+                '净值日期': data_main.get('jzrq', '未知'),
+                '申购状态': data_main.get('sgzt', '未知'),
+                '赎回状态': data_main.get('shzt', '未知'),
+                
+                # 费率/步长
+                '费率': fund_rate if fund_rate else '未知',
+                '申购步长': fund_minsg if fund_minsg else '未知',
+                
+                # 冗余字段
+                '申购净值': '未知',
+                '申购报价': '未知',
+            }
+
+            print(f"    -> 基金 {fund_code} 基本信息抓取成功 (名称: {result['名称']} | 公司: {result['公司名称']} | 经理: {result['基金经理']})")
+            return fund_code, result
+
+        except Exception as e:
+            error_message = str(e)
+            print(f"    -> 基金 {fund_code} [信息抓取失败]: {error_message}")
+            return fund_code, default_result
+
+# --------------------------------------------------------------------------------------
+# 文件读取、缓存和动态数据抓取逻辑 (保持不变)
 # --------------------------------------------------------------------------------------
 
 def get_all_fund_codes(file_path):
@@ -135,138 +299,6 @@ async def fetch_js_page(session, url):
             raise aiohttp.ClientError(f"HTTP 错误: {response.status}")
         return await response.text()
 
-# ===================================================================================
-# 核心修复函数：使用正则提取变量，并改进 JSON/JS Object 字面量解析
-# ===================================================================================
-def parse_js_object_literal(js_text):
-    """
-    尝试将 JS 对象字面量（键没有引号）转换为 Python 字典。
-    这比纯正则替换键名更可靠。
-    """
-    try:
-        # 1. 替换 JS 的 true/false/null 为 Python 的 True/False/None
-        text = js_text.replace('true', 'True').replace('false', 'False').replace('null', 'None')
-        # 2. 将无引号的键名 (key:) 替换为带引号的键名 ("key":)
-        # 匹配：{ 或 , 之后跟着一个或多个字母数字下划线，再跟着 :
-        # 注意：这假定键名只包含字母、数字和下划线，且没有注释等干扰
-        text = re.sub(r'([\{\,]\s*)([a-zA-Z_]\w*)\s*:', r'\1"\2":', text)
-        # 3. 使用 ast.literal_eval 安全地解析 Python 字面量
-        return ast.literal_eval(text)
-    except Exception as e:
-        print(f"    [解析错误] 尝试使用 ast 解析 JS 对象字面量失败: {e}")
-        # 如果 ast.literal_eval 失败，可能是数据量太大或格式太复杂，退回到原始文本
-        return None
-
-
-async def fetch_fund_info(fund_code, session, semaphore):
-    """异步抓取基金基本信息，包含增强的变量提取逻辑"""
-    print(f"    -> 开始抓取基金 {fund_code} 的基本信息")
-    url = BASE_URL_INFO_JS.format(fund_code=fund_code)
-    
-    # 默认值，以防抓取失败
-    default_result = {
-        '代码': fund_code, '名称': '抓取失败', '类型': '未知', '成立日期': '未知', '基金经理': '未知', 
-        '公司名称': '未知', '基金简称': '未知', '基金类型': '未知', '发行时间': '未知', '估值日期': '未知', 
-        '估值涨幅': '未知', '累计净值': '未知', '单位净值': '未知', '申购净值': '未知', '申购报价': '未知', 
-        '净值日期': '未知', '申购状态': '未知', '赎回状态': '未知', '费率': '未知', '申购步长': '未知'
-    }
-    
-    async with semaphore:
-        try:
-            await asyncio.sleep(REQUEST_DELAY * 0.5)
-            js_text = await fetch_js_page(session, url)
-            
-            # 1. 移除 BOM 字符 (U+FEFF)
-            js_text = js_text.lstrip('\ufeff')
-            
-            # 2. 定义变量提取的正则表达式辅助函数 (用于简单变量)
-            def extract_var(text, var_name):
-                # 匹配 var var_name = "value"; 或 var var_name = value;
-                match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*(.*?);', text, re.DOTALL)
-                if match:
-                    value = match.group(1).strip()
-                    # 尝试移除字符串首尾引号（单引号或双引号）
-                    if (value.startswith('"') and value.endswith('"')) or \
-                       (value.startswith("'") and value.endswith("'")):
-                        return value[1:-1].lstrip('\ufeff')
-                    return value
-                return None
-
-            # 3. 提取简单变量
-            fund_name = extract_var(js_text, 'fS_name') or '未知名称'
-            fund_code_in_data = extract_var(js_text, 'fS_code') or fund_code
-            fund_type_raw = extract_var(js_text, 'FTyp')
-            fund_rate = extract_var(js_text, 'fund_Rate')
-            fund_minsg = extract_var(js_text, 'fund_minsg')
-            
-            # 4. **核心修复**：提取并解析 apidata (大型 JSON 块)
-            data_main = {}
-            json_match = re.search(r'var\s+apidata\s*=\s*(\{.*?\});', js_text, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(1).strip()
-                try:
-                    # apidata 通常是标准 JSON，但可能包含注释或格式问题，先简单清洗
-                    corrected_json_str = json_str.replace("'", '"')
-                    corrected_json_str = re.sub(r'//.*?\n|/\*.*?\*/', '', corrected_json_str, flags=re.DOTALL)
-                    data_main = json.loads(corrected_json_str)
-                except json.JSONDecodeError as e:
-                    print(f"    [解析错误] 基金 {fund_code} apidata 标准 JSON 解析失败: {e}")
-                    # 尝试用 JS Object Literal 方式解析
-                    data_main_parsed = parse_js_object_literal(json_str)
-                    if data_main_parsed:
-                         data_main = data_main_parsed
-            
-            # 5. **核心修复**：提取并解析 Data_fund_info (JS 对象字面量)
-            data_info = {}
-            data_info_str = extract_var(js_text, 'Data_fund_info')
-            if data_info_str:
-                 # Data_fund_info 是典型的 JS Object Literal，使用新的通用解析函数
-                 data_info = parse_js_object_literal(data_info_str) or {}
-
-
-            # 6. 整理最终结果
-            result = {
-                '代码': fund_code_in_data,
-                '名称': fund_name,
-                
-                # 优先从 Data_fund_info 提取
-                '类型': data_info.get('FundType', fund_type_raw or data_main.get('FTyp', '未知')), # FundType在data_info中
-                '成立日期': data_info.get('EstablishDate', data_main.get('qjdate', '未知')),
-                '基金经理': data_info.get('FundManager', '未知'),
-                '公司名称': data_info.get('FundCompany', data_main.get('jjgs', '未知')),
-                '发行时间': data_info.get('IssueDate', '未知'),
-                
-                # 从 data_main (apidata) 中提取估值/净值信息
-                '估值日期': data_main.get('gzrq', '未知'),
-                '估值涨幅': data_main.get('gszzl', '未知'),
-                '累计净值': data_main.get('ljjz', '未知'),
-                '单位净值': data_main.get('dwjz', '未知'),
-                '净值日期': data_main.get('jzrq', '未知'),
-                '申购状态': data_main.get('sgzt', '未知'),
-                '赎回状态': data_main.get('shzt', '未知'),
-                
-                # 从简单变量中提取的信息
-                '费率': fund_rate if fund_rate else '未知',
-                '申购步长': fund_minsg if fund_minsg else '未知',
-                
-                # 冗余字段
-                '基金简称': fund_name.split('(')[0].strip() if '(' in fund_name else fund_name.strip(),
-                '基金类型': data_info.get('FundType', fund_type_raw or data_main.get('FTyp', '未知')),
-                '申购净值': '未知',
-                '申购报价': '未知',
-            }
-
-            print(f"    -> 基金 {fund_code} 基本信息抓取成功 (名称: {result['名称']} | 公司: {result['公司名称']} | 经理: {result['基金经理']})")
-            return fund_code, result
-
-        except Exception as e:
-            error_message = str(e)
-            print(f"    -> 基金 {fund_code} [信息抓取失败]: {error_message}")
-            return fund_code, default_result
-# ===================================================================================
-# 核心修复函数结束
-# ===================================================================================
-
 async def fetch_and_cache_fund_info(fund_codes):
     """主函数：检查缓存，对未缓存的基金进行并发抓取"""
     print("\n======== 开始抓取基金基本信息（静态数据）========\n")
@@ -274,7 +306,13 @@ async def fetch_and_cache_fund_info(fund_codes):
     loop = asyncio.get_event_loop()
     info_cache = await loop.run_in_executor(None, load_info_cache)
     
-    codes_to_fetch = [code for code in fund_codes if code not in info_cache or info_cache[code].get('名称') in ['未知名称', '抓取失败'] or info_cache[code].get('基金经理') == '未知'] # 新增判断条件
+    # 重新抓取条件：代码缺失或名称/经理/公司为 '未知' 或 '抓取失败'
+    codes_to_fetch = [
+        code for code in fund_codes if code not in info_cache or 
+        info_cache[code].get('名称') in ['未知名称', '抓取失败'] or 
+        info_cache[code].get('基金经理') == '未知' or 
+        info_cache[code].get('公司名称') == '未知'
+    ]
     
     if not codes_to_fetch:
         print("所有基金的基本信息都已在缓存中。")
@@ -299,7 +337,6 @@ async def fetch_and_cache_fund_info(fund_codes):
 # --------------------------------------------------------------------------------------
 # 基金净值 (动态数据) 抓取和保存逻辑 (保持不变)
 # --------------------------------------------------------------------------------------
-# ... (load_latest_date, fetch_page, fetch_net_values, save_to_csv, fetch_all_funds, main 函数保持不变)
 
 def load_latest_date(fund_code):
     """从本地 CSV 文件中读取现有最新日期"""
@@ -308,30 +345,12 @@ def load_latest_date(fund_code):
         try:
             df = pd.read_csv(output_path, parse_dates=['date'], encoding='utf-8')
             if not df.empty and 'date' in df.columns:
-                # 确保读取的是日期而不是时间戳
                 latest_date = df['date'].max().to_pydatetime().date()
                 print(f"  -> 基金 {fund_code} 现有最新日期: {latest_date.strftime('%Y-%m-%d')}")
                 return latest_date
         except Exception as e:
             print(f"  -> 加载 {fund_code} CSV 失败: {e}")
     return None
-
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_message(match='Frequency Capped')
-)
-async def fetch_page(session, url):
-    """异步请求单页数据，带重试机制"""
-    async with session.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT) as response:
-        if response.status == 514:
-            raise aiohttp.ClientError("Frequency Capped")
-        if response.status != 200:
-            print(f"    -> HTTP 状态码: {response.status}")
-            text = await response.text()
-            print(f"    -> 响应内容（前100字符）: {text[:100]}")
-            raise aiohttp.ClientError(f"HTTP 错误: {response.status}")
-        return await response.text()
 
 async def fetch_net_values(fund_code, session, semaphore):
     """使用“最新日期”作为停止条件，实现智能增量更新"""
@@ -356,7 +375,6 @@ async def fetch_net_values(fund_code, session, semaphore):
                 
                 text = await fetch_page(session, url)
                 
-                # 检查并处理返回的总页数和总记录数
                 if first_run:
                     total_pages_match = re.search(r'pages:(\d+)', text)
                     total_pages = int(total_pages_match.group(1)) if total_pages_match else 1
@@ -370,7 +388,6 @@ async def fetch_net_values(fund_code, session, semaphore):
                         
                     first_run = False
                 
-                # 使用 BeautifulSoup 解析表格数据
                 soup = BeautifulSoup(text, 'lxml')
                 table = soup.find('table')
                 if not table:
@@ -388,16 +405,16 @@ async def fetch_net_values(fund_code, session, semaphore):
                 
                 for row in rows:
                     cols = row.find_all('td')
-                    if len(cols) < 7: # 根据 <DOCUMENT> 的表格结构，预期7列
+                    if len(cols) < 7:
                         continue
                         
-                    date_str = cols[0].text.strip() # 净值日期
-                    net_value_str = cols[1].text.strip() # 单位净值
-                    cumulative_net_value = cols[2].text.strip() # 累计净值
-                    daily_growth_rate = cols[3].text.strip() # 日增长率
-                    purchase_status = cols[4].text.strip() # 申购状态
-                    redemption_status = cols[5].text.strip() # 赎回状态
-                    dividend = cols[6].text.strip() # 分红送配
+                    date_str = cols[0].text.strip()
+                    net_value_str = cols[1].text.strip()
+                    cumulative_net_value = cols[2].text.strip()
+                    daily_growth_rate = cols[3].text.strip()
+                    purchase_status = cols[4].text.strip()
+                    redemption_status = cols[5].text.strip()
+                    dividend = cols[6].text.strip()
                     
                     if not date_str or not net_value_str:
                         continue
@@ -407,7 +424,6 @@ async def fetch_net_values(fund_code, session, semaphore):
                         if not latest_api_date or date > latest_api_date:
                             latest_api_date = date
                         
-                        # 增量更新逻辑：如果当前数据日期小于等于本地最新日期，则停止
                         if latest_date and date <= latest_date:
                             stop_fetch = True
                             break
@@ -453,7 +469,7 @@ async def fetch_net_values(fund_code, session, semaphore):
         return fund_code, all_records
 
 def save_to_csv(fund_code, data):
-    """将历史净值数据以增量更新方式保存为 CSV 文件，格式为 date,net_value等"""
+    """将历史净值数据以增量更新方式保存为 CSV 文件"""
     output_path = os.path.join(OUTPUT_DIR, f"{fund_code}.csv")
     if not isinstance(data, list) or not data:
         print(f"    基金 {fund_code} 无新数据可保存。")
@@ -464,7 +480,6 @@ def save_to_csv(fund_code, data):
     try:
         new_df['net_value'] = pd.to_numeric(new_df['net_value'], errors='coerce').round(4)
         new_df['cumulative_net_value'] = pd.to_numeric(new_df['cumulative_net_value'], errors='coerce').round(4)
-        # 清理并转换 'daily_growth_rate'
         new_df['daily_growth_rate'] = new_df['daily_growth_rate'].replace('--', '0').str.rstrip('%').astype(float) / 100.0
         new_df['date'] = pd.to_datetime(new_df['date'], errors='coerce')
         new_df.dropna(subset=['date', 'net_value'], inplace=True)
@@ -492,7 +507,7 @@ def save_to_csv(fund_code, data):
     final_df['date'] = final_df['date'].dt.strftime('%Y-%m-%d')
     
     try:
-        os.makedirs(OUTPUT_DIR, exist_ok=True) # 确保目录存在
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
         final_df.to_csv(output_path, index=False, encoding='utf-8')
         new_record_count = len(final_df)
         newly_added = new_record_count - old_record_count
@@ -528,7 +543,6 @@ async def fetch_all_funds(fund_codes):
 
             if isinstance(net_values, list):
                 try:
-                    # 将保存操作放在线程池中执行
                     success, new_records = await loop.run_in_executor(None, save_to_csv, fund_code, net_values)
                     if success:
                         success_count += 1
@@ -562,7 +576,6 @@ def main():
         processed_codes = fund_codes
     print(f"本次处理 {len(processed_codes)} 个基金。")
 
-    # 尝试获取或创建一个新的事件循环
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
