@@ -146,37 +146,36 @@ async def fetch_fund_info(fund_code, session, semaphore):
             # 调试：记录响应内容的前100字符
             print(f"   -> 基金 {fund_code} 响应内容（前100字符）: {js_text[:100]}")
             
-            # 提取 JSON 数据：var apidata={...}; 或其他可能的变量名
-            json_match = re.search(r'var\s+\w+\s*=\s*(\{.*?\});?\s*$', js_text, re.DOTALL)
+            # 提取 JSON 数据：优先匹配 var apidata={...};，后备匹配任意 var xxx={...};
+            json_match = re.search(r'var\s+apidata\s*=\s*(\{.*?\});?\s*$', js_text, re.DOTALL)
             if not json_match:
-                raise ValueError("未找到 JSON 数据")
+                json_match = re.search(r'var\s+\w+\s*=\s*(\{.*?\});?\s*$', js_text, re.DOTALL)
+                if not json_match:
+                    raise ValueError("未找到 JSON 数据")
             
             json_str = json_match.group(1)
             data = json.loads(json_str)
             
-            # 提取字段（基于典型结构）
-            fs = data.get('fs', [{}])[0]  # 第一个基金数据
-            fund_name = fs.get('shortname', '未知')  # 名称
-            fund_type = fs.get('ftype', '未知')  # 类型
-            establish_date = fs.get('setupdate', '未知')  # 成立日期
-            manager = fs.get('fundmanager', '未知')  # 基金经理
-            
-            # 提取更多信息
-            fcName = fs.get('compname', '未知')  # 公司名称
-            jjjc = fs.get('shortname', '未知')  # 基金简称
-            jjlx = fs.get('ftype', '未知')  # 基金类型
-            fjsj = fs.get('setupdate', '未知')  # 发行时间
-            gzrq = fs.get('gzdate', '未知')  # 估值日期
-            gzbl = fs.get('gztime', '未知')  # 估值涨幅
-            ljjz = fs.get('cumvalue', '未知')  # 累计净值
-            dwjz = fs.get('dwjz', '未知')  # 单位净值
-            sgjz = fs.get('gszzl', '未知')  # 申购净值
-            sgbz = fs.get('gsdate', '未知')  # 申购报价
-            jzrq = fs.get('jzrq', '未知')  # 净值日期
-            buy = fs.get('buy', '未知')  # 申购状态
-            sell = fs.get('sell', '未知')  # 赎回状态
-            rate = fs.get('rate', '未知')  # 费率
-            sgbs = fs.get('sgbs', '未知')  # 申购步长
+            # 提取字段（根据提供的 <DOCUMENT> 调整映射）
+            fund_name = data.get('fS_name', '未知')  # 基金名称
+            fund_code = data.get('fS_code', fund_code)  # 基金代码
+            fund_type = '未知'  # 类型（文档中未提供明确字段，设为未知）
+            establish_date = '未知'  # 成立日期（文档中未提供）
+            manager = '未知'  # 基金经理（文档中未提供）
+            company_name = '未知'  # 公司名称（文档中未提供）
+            fund_shortname = data.get('fS_name', '未知')  # 基金简称
+            issue_date = '未知'  # 发行时间（文档中未提供）
+            valuation_date = '未知'  # 估值日期（文档中未提供）
+            valuation_increase = '未知'  # 估值涨幅（文档中未提供）
+            cumulative_net_value = '未知'  # 累计净值（文档中未提供）
+            unit_net_value = '未知'  # 单位净值（文档中未提供）
+            purchase_net_value = '未知'  # 申购净值（文档中未提供）
+            purchase_quote = '未知'  # 申购报价（文档中未提供）
+            net_value_date = '未知'  # 净值日期（文档中未提供）
+            purchase_status = '未知'  # 申购状态（文档中未提供）
+            redemption_status = '未知'  # 赎回状态（文档中未提供）
+            rate = data.get('fund_Rate', '未知')  # 现费率
+            purchase_step = data.get('fund_minsg', '未知')  # 最小申购金额
             
             result = {
                 '代码': fund_code,
@@ -184,21 +183,21 @@ async def fetch_fund_info(fund_code, session, semaphore):
                 '类型': fund_type,
                 '成立日期': establish_date,
                 '基金经理': manager,
-                '公司名称': fcName,
-                '基金简称': jjjc,
-                '基金类型': jjlx,
-                '发行时间': fjsj,
-                '估值日期': gzrq,
-                '估值涨幅': gzbl,
-                '累计净值': ljjz,
-                '单位净值': dwjz,
-                '申购净值': sgjz,
-                '申购报价': sgbz,
-                '净值日期': jzrq,
-                '申购状态': buy,
-                '赎回状态': sell,
+                '公司名称': company_name,
+                '基金简称': fund_shortname,
+                '基金类型': fund_type,
+                '发行时间': issue_date,
+                '估值日期': valuation_date,
+                '估值涨幅': valuation_increase,
+                '累计净值': cumulative_net_value,
+                '单位净值': unit_net_value,
+                '申购净值': purchase_net_value,
+                '申购报价': purchase_quote,
+                '净值日期': net_value_date,
+                '申购状态': purchase_status,
+                '赎回状态': redemption_status,
                 '费率': rate,
-                '申购步长': sgbs
+                '申购步长': purchase_step
             }
             print(f"   -> 基金 {fund_code} 基本信息抓取成功")
             return fund_code, result
@@ -309,7 +308,11 @@ async def fetch_page(session, url):
     async with session.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT) as response:
         if response.status == 514:
             raise aiohttp.ClientError("Frequency Capped")
-        response.raise_for_status()
+        if response.status != 200:
+            print(f"   -> HTTP 状态码: {response.status}")
+            text = await response.text()
+            print(f"   -> 响应内容（前100字符）: {text[:100]}")
+            raise aiohttp.ClientError(f"HTTP 错误: {response.status}")
         return await response.text()
 
 async def fetch_net_values(fund_code, session, semaphore):
@@ -365,12 +368,17 @@ async def fetch_net_values(fund_code, session, semaphore):
                 
                 for row in rows:
                     cols = row.find_all('td')
-                    if len(cols) < 2:
+                    if len(cols) < 7:  # 根据 <DOCUMENT> 的表格结构，预期7列
                         continue
-                    date_str = cols[0].text.strip()
-                    net_value_str = cols[1].text.strip()
+                    date_str = cols[0].text.strip()  # 净值日期
+                    net_value_str = cols[1].text.strip()  # 单位净值
+                    cumulative_net_value = cols[2].text.strip()  # 累计净值
+                    daily_growth_rate = cols[3].text.strip()  # 日增长率
+                    purchase_status = cols[4].text.strip()  # 申购状态
+                    redemption_status = cols[5].text.strip()  # 赎回状态
+                    dividend = cols[6].text.strip()  # 分红送配
                     
-                    if not date_str or not net_value_str or net_value_str == '-':
+                    if not date_str or not net_value_str:
                         continue
                         
                     try:
@@ -382,7 +390,15 @@ async def fetch_net_values(fund_code, session, semaphore):
                             stop_fetch = True
                             break
                             
-                        page_records.append({'date': date_str, 'net_value': net_value_str})
+                        page_records.append({
+                            'date': date_str,
+                            'net_value': net_value_str,
+                            'cumulative_net_value': cumulative_net_value,
+                            'daily_growth_rate': daily_growth_rate,
+                            'purchase_status': purchase_status,
+                            'redemption_status': redemption_status,
+                            'dividend': dividend
+                        })
                     except ValueError:
                         continue
                 
@@ -415,7 +431,7 @@ async def fetch_net_values(fund_code, session, semaphore):
         return fund_code, all_records
 
 def save_to_csv(fund_code, data):
-    """将历史净值数据以增量更新方式保存为 CSV 文件，格式为 date,net_value"""
+    """将历史净值数据以增量更新方式保存为 CSV 文件，格式为 date,net_value等"""
     output_path = os.path.join(OUTPUT_DIR, f"{fund_code}.csv")
     if not isinstance(data, list) or not data:
         print(f"   基金 {fund_code} 无新数据可保存。")
@@ -425,6 +441,8 @@ def save_to_csv(fund_code, data):
 
     try:
         new_df['net_value'] = pd.to_numeric(new_df['net_value'], errors='coerce').round(4)
+        new_df['cumulative_net_value'] = pd.to_numeric(new_df['cumulative_net_value'], errors='coerce').round(4)
+        new_df['daily_growth_rate'] = new_df['daily_growth_rate'].str.rstrip('%').astype(float) / 100.0
         new_df['date'] = pd.to_datetime(new_df['date'], errors='coerce')
         new_df.dropna(subset=['date', 'net_value'], inplace=True)
         if new_df.empty:
@@ -437,7 +455,7 @@ def save_to_csv(fund_code, data):
     old_record_count = 0
     if os.path.exists(output_path):
         try:
-            existing_df = pd.read_csv(output_path, parse_dates=['date'], dtype={'net_value': float}, encoding='utf-8')
+            existing_df = pd.read_csv(output_path, parse_dates=['date'], encoding='utf-8')
             old_record_count = len(existing_df)
             combined_df = pd.concat([new_df, existing_df])
         except Exception as e:
