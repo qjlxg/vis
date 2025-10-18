@@ -16,7 +16,7 @@ import json
 INPUT_FILE = 'C类.txt'
 OUTPUT_DIR = 'fund_data'
 BASE_URL_NET_VALUE = "http://fundf10.eastmoney.com/F10DataApi.aspx?type=lsjz&code={fund_code}&page={page_index}&per=20"
-BASE_URL_INFO = "http://fund.eastmoney.com/{fund_code}.html"
+BASE_URL_INFO_JS = "http://fund.eastmoney.com/pingzhongdata/{fund_code}.js"
 INFO_CACHE_FILE = 'fund_info.csv'
 
 # 设置请求头
@@ -104,14 +104,14 @@ def save_info_cache(cache):
         df.reset_index(inplace=True)
         df.rename(columns={'index': 'code'}, inplace=True)
         
-        # 固定列顺序
-        cols = ['code', 'name', 'type', 'establish_date', 'manager']
+        # 固定列顺序，使用中文列名
+        cols = ['代码', '名称', '类型', '成立日期', '基金经理', '公司名称', '基金简称', '基金类型', '发行时间', '估值日期', '估值涨幅', '累计净值', '单位净值', '申购净值', '申购报价', '净值日期', '申购状态', '赎回状态', '费率', '申购步长']
         for col in cols:
             if col not in df.columns:
                 df[col] = '未知'
         df = df[cols]
         
-        df['code'] = df['code'].astype(str)
+        df['代码'] = df['代码'].astype(str)
         df.to_csv(INFO_CACHE_FILE, index=False, encoding='utf-8')
         print(f"  -> 成功保存基本信息缓存到 {INFO_CACHE_FILE}")
     except Exception as e:
@@ -122,8 +122,8 @@ def save_info_cache(cache):
     wait=wait_exponential(multiplier=1, min=2, max=10),
     retry=retry_if_exception_message(match='Frequency Capped')
 )
-async def fetch_html_page(session, url):
-    """异步请求 HTML 页面，带重试机制"""
+async def fetch_js_page(session, url):
+    """异步请求 JS 页面，带重试机制"""
     async with session.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT) as response:
         if response.status == 514:
             raise aiohttp.ClientError("Frequency Capped")
@@ -133,82 +133,93 @@ async def fetch_html_page(session, url):
 async def fetch_fund_info(fund_code, session, semaphore):
     """异步抓取基金基本信息"""
     print(f"   -> 开始抓取基金 {fund_code} 的基本信息")
-    url = BASE_URL_INFO.format(fund_code=fund_code)
+    url = BASE_URL_INFO_JS.format(fund_code=fund_code)
     async with semaphore:
         try:
             await asyncio.sleep(REQUEST_DELAY * 0.5)
-            html = await fetch_html_page(session, url)
-            soup = BeautifulSoup(html, 'lxml')
+            js_text = await fetch_js_page(session, url)
             
-            # --- 1. 基金名称 ---
-            name_tag = soup.find('div', class_='fundDetail-tit')
-            if name_tag:
-                # 提取标题 div 中的第一个 div 的文本
-                full_name = name_tag.find('div', style="float: left").text.strip()
-                # 去除末尾的基金代码 (021909)
-                fund_name = re.sub(r'\(\d+\)$|\s\d+$', '', full_name).strip()
-            else:
-                fund_name = '未知名称'
-
-            # --- 2. 基金详情信息 (根据用户提供的HTML进行精确修复) ---
-            fund_type = '未知'
-            establish_date = '未知'
-            manager = '未知'
-
-            # 关键信息位于 class="infoOfFund" 的 table 中
-            info_table = soup.find('div', class_='infoOfFund').find('table')
+            # 提取 JSON 数据：var apidata={...};
+            json_match = re.search(r'var\s+apidata\s*=\s*(\{.*?\});?\s*$', js_text, re.DOTALL)
+            if not json_match:
+                raise ValueError("未找到 apidata JSON 数据")
             
-            if info_table:
-                # 提取所有行
-                rows = info_table.find_all('tr')
-                
-                # 遍历每一行来查找信息
-                for row in rows:
-                    cols = row.find_all('td')
-                    if not cols:
-                        continue
-                    
-                    # --- 提取 类型 ---
-                    # 类型在第一行第一个 td 中
-                    if '类型：' in cols[0].text:
-                        # 文本格式如：类型：<a href="...">指数型-股票</a>&nbsp;&nbsp;|&nbsp;&nbsp;中高风险
-                        type_match = re.search(r'类型：(.*?)(?:\&nbsp|\|)', cols[0].text, re.DOTALL)
-                        if type_match:
-                            fund_type = type_match.group(1).strip()
-                            # 进一步清理可能残余的链接文本或多余空格
-                            if fund_type.startswith('<a'):
-                                type_tag = cols[0].find('a')
-                                fund_type = type_tag.text.strip() if type_tag else '未知'
-                            
-                    # --- 提取 基金经理 ---
-                    # 基金经理在第一行第三个 td 中
-                    if '基金经理：' in cols[2].text:
-                        # 文本格式如：基金经理：<a href="...">寇斌权</a>
-                        manager_tag = cols[2].find('a')
-                        manager = manager_tag.text.strip() if manager_tag else cols[2].text.replace('基金经理：', '').strip()
-
-                    # --- 提取 成立日期 ---
-                    # 成立日期在第二行第一个 td 中
-                    if '成 立 日：' in cols[0].text and '成 立 日：' not in fund_type:
-                        # 文本格式如：<span class="letterSpace01">成 立 日</span>：2024-08-27
-                        date_match = re.search(r'(\d{4}-\d{2}-\d{2})', cols[0].text)
-                        if date_match:
-                            establish_date = date_match.group(1).strip()
-                            
-            # 3. 构造结果字典
+            json_str = json_match.group(1)
+            data = json.loads(json_str)
+            
+            # 提取字段（基于典型结构）
+            fs = data.get('fs', [{}])[0]  # 第一个基金数据
+            fund_name = fs.get('shortname', '未知')  # 名称
+            fund_type = fs.get('ftype', '未知')  # 类型
+            establish_date = fs.get('setupdate', '未知')  # 成立日期
+            manager = fs.get('fundmanager', '未知')  # 基金经理
+            
+            # 提取更多信息
+            fcName = fs.get('compname', '未知')  # 公司名称
+            jjjc = fs.get('shortname', '未知')  # 基金简称
+            jjlx = fs.get('ftype', '未知')  # 基金类型
+            fjsj = fs.get('setupdate', '未知')  # 发行时间
+            gzrq = fs.get('gzdate', '未知')  # 估值日期
+            gzbl = fs.get('gztime', '未知')  # 估值涨幅
+            ljjz = fs.get('cumvalue', '未知')  # 累计净值
+            dwjz = fs.get('dwjz', '未知')  # 单位净值
+            sgjz = fs.get('gszzl', '未知')  # 申购净值
+            sgbz = fs.get('gsdate', '未知')  # 申购报价
+            jzrq = fs.get('jzrq', '未知')  # 净值日期
+            buy = fs.get('buy', '未知')  # 申购状态
+            sell = fs.get('sell', '未知')  # 赎回状态
+            rate = fs.get('rate', '未知')  # 费率
+            sgbs = fs.get('sgbs', '未知')  # 申购步长
+            
             result = {
-                'code': fund_code,
-                'name': fund_name,
-                'type': fund_type,
-                'establish_date': establish_date,
-                'manager': manager
+                '代码': fund_code,
+                '名称': fund_name,
+                '类型': fund_type,
+                '成立日期': establish_date,
+                '基金经理': manager,
+                '公司名称': fcName,
+                '基金简称': jjjc,
+                '基金类型': jjlx,
+                '发行时间': fjsj,
+                '估值日期': gzrq,
+                '估值涨幅': gzbl,
+                '累计净值': ljjz,
+                '单位净值': dwjz,
+                '申购净值': sgjz,
+                '申购报价': sgbz,
+                '净值日期': jzrq,
+                '申购状态': buy,
+                '赎回状态': sell,
+                '费率': rate,
+                '申购步长': sgbs
             }
             print(f"   -> 基金 {fund_code} 基本信息抓取成功")
             return fund_code, result
 
         except Exception as e:
             print(f"   -> 基金 {fund_code} [信息抓取失败]: {e}")
-            return fund_code, {'code': fund_code, 'name': '抓取失败', 'type': '未知', 'establish_date': '未知', 'manager': '未知'}
+            return fund_code, {
+                '代码': fund_code,
+                '名称': '抓取失败',
+                '类型': '未知',
+                '成立日期': '未知',
+                '基金经理': '未知',
+                '公司名称': '未知',
+                '基金简称': '未知',
+                '基金类型': '未知',
+                '发行时间': '未知',
+                '估值日期': '未知',
+                '估值涨幅': '未知',
+                '累计净值': '未知',
+                '单位净值': '未知',
+                '申购净值': '未知',
+                '申购报价': '未知',
+                '净值日期': '未知',
+                '申购状态': '未知',
+                '赎回状态': '未知',
+                '费率': '未知',
+                '申购步长': '未知'
+            }
 
 async def fetch_and_cache_fund_info(fund_codes):
     """主函数：检查缓存，对未缓存的基金进行并发抓取"""
@@ -217,7 +228,7 @@ async def fetch_and_cache_fund_info(fund_codes):
     loop = asyncio.get_event_loop()
     info_cache = await loop.run_in_executor(None, load_info_cache)
     
-    codes_to_fetch = [code for code in fund_codes if code not in info_cache or info_cache[code].get('name') in ['未知名称', '抓取失败']]
+    codes_to_fetch = [code for code in fund_codes if code not in info_cache or info_cache[code].get('名称') in ['未知名称', '抓取失败']]
     
     if not codes_to_fetch:
         print("所有基金的基本信息都已在缓存中。")
@@ -236,7 +247,28 @@ async def fetch_and_cache_fund_info(fund_codes):
                 info_cache[code] = result
             except Exception as e:
                 print(f"[错误] 处理基本信息任务时发生错误: {e}")
-                info_cache[code] = {'code': code, 'name': '抓取失败', 'type': '未知', 'establish_date': '未知', 'manager': '未知'}
+                info_cache[code] = {
+                    '代码': code,
+                    '名称': '抓取失败',
+                    '类型': '未知',
+                    '成立日期': '未知',
+                    '基金经理': '未知',
+                    '公司名称': '未知',
+                    '基金简称': '未知',
+                    '基金类型': '未知',
+                    '发行时间': '未知',
+                    '估值日期': '未知',
+                    '估值涨幅': '未知',
+                    '累计净值': '未知',
+                    '单位净值': '未知',
+                    '申购净值': '未知',
+                    '申购报价': '未知',
+                    '净值日期': '未知',
+                    '申购状态': '未知',
+                    '赎回状态': '未知',
+                    '费率': '未知',
+                    '申购步长': '未知'
+                }
                 
     await loop.run_in_executor(None, save_info_cache, info_cache)
     print("\n======== 基金基本信息抓取完成 ========\n")
