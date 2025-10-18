@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install akshare pandas pandas_ta
+          pip install akshare pandas pandas-ta
 
       - name: Run script
         run: python index_volume.py
