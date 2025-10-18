@@ -11,7 +11,11 @@ from datetime import datetime, timedelta
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_message
 import concurrent.futures
 import json
-# 移除了 ast 模块，采用更直接的正则 + json.loads 组合
+import logging
+
+# 配置日志（可选，用于查看详细的解析错误）
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # 定义文件路径和目录
 INPUT_FILE = 'C类.txt'
@@ -33,7 +37,7 @@ MAX_FUNDS_PER_RUN = 0
 PAGE_SIZE = 20
 
 # --------------------------------------------------------------------------------------
-# 辅助函数：JS变量提取和解析 (最终增强)
+# 辅助函数：JS变量提取和解析 (最终优化)
 # --------------------------------------------------------------------------------------
 
 def extract_simple_var(text, var_name):
@@ -50,19 +54,21 @@ def extract_simple_var(text, var_name):
 def extract_json_var(text, var_name):
     """
     提取复杂的 JSON/JS Object Literal 变量，如 apidata, Data_fund_info。
+    使用非贪婪匹配来确保捕获到正确的结束位置。
     """
     # 匹配 var var_name = [ { ... } ] ; 或 var var_name = { ... } ;
-    match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*(\[.*?\]|\{.*?\}|\[.*?\}\]\s*\/\*|\{.*?\}\s*\/\*).*?;', text, re.DOTALL)
+    # 注意：使用 .*? 配合 [;] 结束符，确保不会过度匹配
+    match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*(\[.*?\]|\{.*?\}).*?;', text, re.DOTALL)
     if match:
         data_str = match.group(1).strip()
-        # 清理可能存在的 JS 注释尾部
-        data_str = re.sub(r'/\*.*$', '', data_str, re.DOTALL).strip()
+        # 清理可能存在的 JS 注释、分号等尾部不必要符号
+        data_str = re.sub(r'/\*.*$', '', data_str, re.DOTALL).strip().rstrip(';')
         return data_str
     return None
 
 def clean_and_parse_js_object(js_text):
     """
-    核心解析函数：清理 JS 对象字面量中的非标准 JSON 格式，并尝试解析为 Python 字典。
+    核心解析函数：清理 JS 对象字面量中的非标准 JSON 格式（如无引号键名），并尝试解析为 Python 字典。
     """
     if not js_text:
         return {}
@@ -76,17 +82,18 @@ def clean_and_parse_js_object(js_text):
     # 2. **关键修复：** 替换所有单引号为双引号
     text = js_text.replace("'", '"')
     
-    # 3. 替换 JS 的 true/false/null 为标准 JSON 的 true/false/null
+    # 3. 替换 JS 的 true/false/null 为标准 JSON 的 true/false/null (已经默认是小写，这步主要是规范化)
     text = text.replace('true', 'true').replace('false', 'false').replace('null', 'null')
     
     # 4. **核心修复：** 将无引号的键名 (key:) 替换为带双引号的键名 ("key":)
-    # 这个正则匹配所有不是数字开头且未被引号包裹的键名
-    # \s*[\{\,]\s* 匹配定界符 { 或 ,
-    # ([a-zA-Z_]\w*) 捕获合法的 JS 标识符作为键名
+    # 匹配：{ 或 , 之后跟着一个或多个字母数字下划线，再跟着 :
+    # (\s*[\{\,]\s*) 匹配定界符 { 或 ,
+    # ([a-zA-Z_]\w*) 捕获合法的 JS/Python 标识符作为键名
     def replace_unquoted_keys(match):
         # match.group(1) 是定界符，match.group(2) 是键名
         return match.group(1) + '"' + match.group(2) + '":'
     
+    # 注意：这个替换必须在值中可能包含冒号之前完成，否则可能出错。
     text = re.sub(r'([\{\,]\s*)([a-zA-Z_]\w*)\s*:', replace_unquoted_keys, text)
 
     try:
@@ -94,16 +101,17 @@ def clean_and_parse_js_object(js_text):
         return data
         
     except json.JSONDecodeError as e:
+        logger.warning(f"JSON 解析失败，尝试清理注释: {e}")
         # 失败后，尝试移除注释再解析 (例如 apidata 中可能包含 // 注释)
         text_no_comments = re.sub(r'//.*?\n|/\*.*?\*/', '', text, flags=re.DOTALL)
         try:
             data = json.loads(text_no_comments)
             return data
-        except json.JSONDecodeError:
-            print(f"    [致命解析错误] 最终 JSON 解析失败: {e}. 原始文本片段: {text[:100]}...")
+        except json.JSONDecodeError as e_final:
+            logger.error(f"最终 JSON 解析失败: {e_final}. 原始文本片段: {text_no_comments[:100]}...")
             return {}
     except Exception as e:
-        print(f"    [解析错误] 通用清理失败: {e}")
+        logger.error(f"解析过程中发生通用错误: {e}")
         return {}
 
 # --------------------------------------------------------------------------------------
@@ -158,6 +166,8 @@ async def fetch_fund_info(fund_code, session, semaphore):
             elif 'FundManager' in data_info and isinstance(data_info['FundManager'], str):
                  manager_name = data_info['FundManager']
 
+            # 基金公司名称可能在 FundCompany 或 jjgs 中
+            company_name = data_info.get('FundCompany', data_main.get('jjgs', '未知'))
 
             result = {
                 '代码': fund_code_in_data,
@@ -165,7 +175,7 @@ async def fetch_fund_info(fund_code, session, semaphore):
                 
                 # 核心信息提取 (优先 Data_fund_info)
                 '基金经理': manager_name,
-                '公司名称': data_info.get('FundCompany', data_main.get('jjgs', '未知')),
+                '公司名称': company_name,
                 '成立日期': data_info.get('EstablishDate', data_main.get('qjdate', '未知')),
                 '基金简称': data_info.get('jjjc', fund_name.split('(')[0].strip() if '(' in fund_name else fund_name.strip()),
                 '基金类型': data_info.get('FundType', fund_type_raw or data_main.get('FTyp', '未知')),
@@ -199,9 +209,8 @@ async def fetch_fund_info(fund_code, session, semaphore):
             return fund_code, default_result
 
 # --------------------------------------------------------------------------------------
-# 文件读取、缓存和动态数据抓取逻辑 (保持不变)
+# 文件读取、缓存和动态数据抓取逻辑 (其余保持不变)
 # --------------------------------------------------------------------------------------
-
 def get_all_fund_codes(file_path):
     """从 C类.txt 文件中读取基金代码"""
     print(f"尝试读取基金代码文件: {file_path}")
@@ -343,11 +352,18 @@ def load_latest_date(fund_code):
             df = pd.read_csv(output_path, parse_dates=['date'], encoding='utf-8')
             if not df.empty and 'date' in df.columns:
                 latest_date = df['date'].max().to_pydatetime().date()
-                print(f"  -> 基金 {fund_code} 现有最新日期: {latest_date.strftime('%Y-%m-%d')}")
+                logger.info(f"  -> 基金 {fund_code} 现有最新日期: {latest_date.strftime('%Y-%m-%d')}")
                 return latest_date
         except Exception as e:
-            print(f"  -> 加载 {fund_code} CSV 失败: {e}")
+            logger.warning(f"  -> 加载 {fund_code} CSV 失败: {e}")
     return None
+
+async def fetch_page(session, url):
+    """异步请求页面，不带重试，由外部 fetch_net_values 控制"""
+    async with session.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT) as response:
+        if response.status != 200:
+            raise aiohttp.ClientError(f"HTTP 错误: {response.status}")
+        return await response.text()
 
 async def fetch_net_values(fund_code, session, semaphore):
     """使用“最新日期”作为停止条件，实现智能增量更新"""
@@ -377,10 +393,10 @@ async def fetch_net_values(fund_code, session, semaphore):
                     total_pages = int(total_pages_match.group(1)) if total_pages_match else 1
                     records_match = re.search(r'records:(\d+)', text)
                     total_records = int(records_match.group(1)) if records_match else '未知'
-                    print(f"    基金 {fund_code} 信息：总页数 {total_pages}，总记录数 {total_records}。")
+                    logger.info(f"    基金 {fund_code} 信息：总页数 {total_pages}，总记录数 {total_records}。")
                     
                     if total_records == '未知' or int(total_records) == 0:
-                        print(f"    基金 {fund_code} [跳过]：API 返回总记录数为 0 或未知。")
+                        logger.warning(f"    基金 {fund_code} [跳过]：API 返回总记录数为 0 或未知。")
                         return fund_code, "API返回记录数为0或代码无效"
                         
                     first_run = False
@@ -388,12 +404,12 @@ async def fetch_net_values(fund_code, session, semaphore):
                 soup = BeautifulSoup(text, 'lxml')
                 table = soup.find('table')
                 if not table:
-                    print(f"    基金 {fund_code} [警告]：页面 {page_index} 无表格数据。提前停止。")
+                    logger.warning(f"    基金 {fund_code} [警告]：页面 {page_index} 无表格数据。提前停止。")
                     break
 
                 rows = table.find_all('tr')[1:]
                 if not rows:
-                    print(f"    基金 {fund_code} 第 {page_index} 页无数据行。停止抓取。")
+                    logger.info(f"    基金 {fund_code} 第 {page_index} 页无数据行。停止抓取。")
                     break
 
                 page_records = []
@@ -438,7 +454,7 @@ async def fetch_net_values(fund_code, session, semaphore):
                         continue
                 
                 if latest_api_date:
-                    print(f"    基金 {fund_code} API 返回最新日期: {latest_api_date.strftime('%Y-%m-%d')}")
+                    logger.info(f"    基金 {fund_code} API 返回最新日期: {latest_api_date.strftime('%Y-%m-%d')}")
                 
                 all_records.extend(page_records)
                 
