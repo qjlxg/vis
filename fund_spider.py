@@ -29,7 +29,7 @@ MAX_CONCURRENT = 5  # 最大并发基金数量
 FORCE_UPDATE = False
 
 # 调试修复后的代码，暂时限制处理数量
-MAX_FUNDS_PER_RUN = 10  
+MAX_FUNDS_PER_RUN = 0  
 
 # 检查基金数据新鲜度的阈值（不再用于强制从头开始，逻辑已简化）
 FRESHNESS_CHECK_DAYS = 5 
