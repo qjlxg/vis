@@ -7,6 +7,7 @@ import aiohttp
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 import re
+import math
 from datetime import datetime, timedelta
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_message
 import concurrent.futures
@@ -37,7 +38,7 @@ MAX_FUNDS_PER_RUN = 0
 PAGE_SIZE = 20
 
 # --------------------------------------------------------------------------------------
-# 辅助函数：JS变量提取和解析 (最终优化 V3 - 核心变化)
+# 辅助函数：JS变量提取和解析 (最终优化 V4 - 核心变化)
 # --------------------------------------------------------------------------------------
 
 def extract_simple_var(text, var_name):
@@ -53,8 +54,7 @@ def extract_simple_var(text, var_name):
 
 def extract_js_variable_content(text, var_name):
     """
-    V3 核心：通过括号计数来提取复杂 JS 变量 (Data_fund_info, apidata) 的完整内容，
-    以避免正则在遇到嵌套和注释时提前停止。
+    V4 核心：通过括号计数来提取复杂 JS 变量，失败时回退到宽泛正则，确保鲁棒性。
     """
     # 1. 精确定位到变量赋值的起始位置
     start_match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*', text)
@@ -71,42 +71,47 @@ def extract_js_variable_content(text, var_name):
     if content_start_index >= len(text):
         return None
 
-    # 3. 确定变量内容的类型（数组或对象）
     start_char = text[content_start_index] # 应该是 [ 或 {
-    if start_char not in ['[', '{']:
-        logger.warning(f"变量 {var_name} 不是数组或对象。内容片段: {text[content_start_index:content_start_index+50]}...")
-        # 退回到简单正则提取（提取到第一个分号）
-        match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*(.*?)\s*;', text, re.DOTALL)
-        return match.group(1).strip() if match else None
-
-    end_char = ']' if start_char == '[' else '}'
-    balance = 0
-    content_end_index = -1
     
-    # 4. 使用计数法找到变量内容的精确结束位置
-    for i in range(content_start_index, len(text)):
-        char = text[i]
+    # --- 尝试使用栈计数法 (最可靠) ---
+    if start_char in ['[', '{']:
+        end_char = ']' if start_char == '[' else '}'
+        balance = 0
+        content_end_index = -1
         
-        if char == start_char:
-            balance += 1
-        elif char == end_char:
-            balance -= 1
-        
-        if balance == 0 and i > content_start_index:
-            content_end_index = i
-            break
+        for i in range(content_start_index, len(text)):
+            char = text[i]
             
-    if content_end_index != -1:
-        data_str = text[content_start_index : content_end_index + 1].strip()
-        
-        # 清理可能存在的 JS 注释，例如：/*申购赎回*/
-        # 匹配 */ 后面直到字符串结束的任意内容，并清除
+            if char == start_char:
+                balance += 1
+            elif char == end_char:
+                balance -= 1
+            
+            if balance == 0 and i > content_start_index:
+                content_end_index = i
+                break
+                
+        if content_end_index != -1:
+            data_str = text[content_start_index : content_end_index + 1].strip()
+            
+            # 清理尾部可能的注释 /*...*/ 或 //...
+            data_str = re.sub(r'\s*/\*.*$', '', data_str, re.DOTALL).strip()
+            data_str = re.sub(r'\s*//.*$', '', data_str, re.MULTILINE).strip()
+            
+            logger.info(f"成功使用栈计数提取变量 {var_name}")
+            return data_str
+    
+    # --- 栈计数失败/不适用，回退到宽泛正则匹配 (容错) ---
+    logger.warning(f"变量 {var_name} 栈计数提取失败或不适用，回退到宽泛正则。")
+    # 匹配 var var_name = ... ;
+    match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*(.*?)\s*;', text, re.DOTALL)
+    if match:
+        data_str = match.group(1).strip()
+        # 强制清理尾部多余的 JS 注释
         data_str = re.sub(r'\s*/\*.*$', '', data_str, re.DOTALL).strip()
-        
-        logger.info(f"成功使用栈计数提取变量 {var_name}")
         return data_str
         
-    logger.warning(f"变量 {var_name} 提取失败：括号不平衡或未找到结束。")
+    logger.error(f"变量 {var_name} 提取失败：栈计数和正则均无效。")
     return None
 
 def clean_and_parse_js_object(js_text):
@@ -116,10 +121,15 @@ def clean_and_parse_js_object(js_text):
     if not js_text:
         return {}
     
-    # 2. **关键修复：** 替换所有单引号为双引号
-    text = js_text.replace("'", '"')
+    text = js_text.strip()
     
-    # 3. 替换 JS 的 true/false/null 为标准 JSON 的 true/false/null
+    # 1. 移除 BOM (Byte Order Mark)
+    text = text.lstrip('\ufeff')
+    
+    # 2. **激进替换：** 替换所有单引号为双引号
+    text = text.replace("'", '"')
+    
+    # 3. 替换 JS 的 true/false/null 为标准 JSON 的 true/false/null (小写)
     text = text.replace('true', 'true').replace('false', 'false').replace('null', 'null')
     
     # 4. **核心修复：** 将无引号的键名 (key:) 替换为带双引号的键名 ("key":)
@@ -130,6 +140,9 @@ def clean_and_parse_js_object(js_text):
     
     # 匹配 { 或 , 之后跟着一个合法的 JS 标识符作为键名
     text = re.sub(r'([\{\,]\s*)([a-zA-Z_]\w*)\s*:', replace_unquoted_keys, text)
+    
+    # 5. **特殊清理：** 移除所有 JS 单行和多行注释
+    text = re.sub(r'//.*?\n|/\*.*?\*/', '', text, flags=re.DOTALL)
 
     try:
         data = json.loads(text)
@@ -141,29 +154,18 @@ def clean_and_parse_js_object(js_text):
         return data
         
     except json.JSONDecodeError as e:
-        logger.warning(f"JSON 解析失败: {e}. 尝试移除注释并重新尝试。")
-        
-        # 失败后，尝试移除注释再解析
-        text_no_comments = re.sub(r'//.*?\n|/\*.*?\*/', '', text, flags=re.DOTALL)
-        try:
-            data = json.loads(text_no_comments)
-            # 再次处理数组情况
-            if isinstance(data, list) and data and isinstance(data[0], dict):
-                 return data[0]
-            return data
-        except json.JSONDecodeError as e_final:
-            logger.error(f"最终 JSON 解析失败: {e_final}. 原始文本片段: {text_no_comments[:100]}...")
-            return {}
+        logger.error(f"最终 JSON 解析失败: {e}. 请检查数据结构是否符合 JS 对象字面量格式。文本片段: {text[:100]}...")
+        return {}
     except Exception as e:
         logger.error(f"解析过程中发生通用错误: {e}")
         return {}
 
 # --------------------------------------------------------------------------------------
-# 基金信息抓取核心逻辑 (已更新)
+# 基金信息抓取核心逻辑 (使用 V4 稳定提取逻辑)
 # --------------------------------------------------------------------------------------
 
 async def fetch_fund_info(fund_code, session, semaphore):
-    """异步抓取基金基本信息，使用 V3 稳定提取逻辑"""
+    """异步抓取基金基本信息，使用 V4 稳定提取逻辑"""
     print(f"    -> 开始抓取基金 {fund_code} 的基本信息")
     url = BASE_URL_INFO_JS.format(fund_code=fund_code)
     
@@ -179,7 +181,6 @@ async def fetch_fund_info(fund_code, session, semaphore):
         try:
             await asyncio.sleep(REQUEST_DELAY * 0.5)
             js_text = await fetch_js_page(session, url)
-            js_text = js_text.lstrip('\ufeff')
             
             # 1. 提取简单变量
             fund_name = extract_simple_var(js_text, 'fS_name') or '未知名称'
@@ -188,29 +189,31 @@ async def fetch_fund_info(fund_code, session, semaphore):
             fund_rate = extract_simple_var(js_text, 'fund_Rate')
             fund_minsg = extract_simple_var(js_text, 'fund_minsg')
             
-            # 2. 提取并解析 Data_fund_info (使用 V3 稳定提取函数)
+            # 2. 提取并解析 Data_fund_info 
             data_info = {}
-            # ********** 核心修改点：使用 extract_js_variable_content **********
             data_info_str = extract_js_variable_content(js_text, 'Data_fund_info')
             if data_info_str:
                  data_info = clean_and_parse_js_object(data_info_str)
             
-            # 3. 提取并解析 apidata (使用 V3 稳定提取函数)
+            # 3. 提取并解析 apidata 
             data_main = {}
-            # ********** 核心修改点：使用 extract_js_variable_content **********
             data_main_str = extract_js_variable_content(js_text, 'apidata')
             if data_main_str:
                  data_main = clean_and_parse_js_object(data_main_str)
 
-            # 4. 整理最终结果 (提取逻辑不变)
+            # 4. 整理最终结果
             
             manager_name = '未知'
+            # 从 data_info 中安全提取基金经理名称 (它通常是包含经理信息的数组)
             if 'FundManager' in data_info:
                 if isinstance(data_info['FundManager'], list) and data_info['FundManager']:
                     # 提取第一个基金经理的名称
                     manager_name = data_info['FundManager'][0].get('name', '未知')
                 elif isinstance(data_info['FundManager'], str) and data_info['FundManager']:
                      manager_name = data_info['FundManager']
+                elif isinstance(data_info['FundManager'], dict):
+                     manager_name = data_info['FundManager'].get('name', '未知')
+
 
             company_name = data_info.get('FundCompany', data_main.get('jjgs', '未知'))
 
@@ -305,13 +308,19 @@ def load_info_cache():
         return {}
 
     try:
-        df = pd.read_csv(INFO_CACHE_FILE, dtype={'代码': str}, encoding='utf-8')
+        # 使用文件路径中提供的 fund_info (5).csv 文件，如果用户提供过这个文件
+        # if os.path.exists('fund_info (5).csv'):
+        #     file_to_load = 'fund_info (5).csv'
+        # else:
+        file_to_load = INFO_CACHE_FILE
+        
+        df = pd.read_csv(file_to_load, dtype={'代码': str}, encoding='utf-8')
         if df.empty:
-            print(f"[警告] 缓存文件 {INFO_CACHE_FILE} 为空。")
+            print(f"[警告] 缓存文件 {file_to_load} 为空。")
             return {}
         df.set_index('代码', inplace=True)
         info_cache = df.to_dict('index')
-        print(f"  -> 成功从 {INFO_CACHE_FILE} 加载 {len(info_cache)} 条缓存记录。")
+        print(f"  -> 成功从 {file_to_load} 加载 {len(info_cache)} 条缓存记录。")
         return info_cache
     except Exception as e:
         print(f"[警告] 加载基本信息缓存失败: {e}。将从头抓取。")
@@ -443,7 +452,7 @@ async def fetch_net_values(fund_code, session, semaphore):
                     total_records = int(records_match.group(1)) if records_match else '未知'
                     logger.info(f"    基金 {fund_code} 信息：总页数 {total_pages}，总记录数 {total_records}。")
                     
-                    if total_records == '未知' or int(total_records) == 0:
+                    if total_records == '未知' or (isinstance(total_records, int) and total_records == 0):
                         logger.warning(f"    基金 {fund_code} [跳过]：API 返回总记录数为 0 或未知。")
                         return fund_code, "API返回记录数为0或代码无效"
                         
@@ -647,7 +656,7 @@ def main():
     success_count, total_new_records, failed_codes = loop.run_until_complete(fetch_all_funds(processed_codes))
     
     print(f"\n======== 本次更新总结 ========")
-    print(f"成功处理 {success_count} 个基金，新增/更新 {total_new_records} 条记录，失败 {len(failed_codes)} 个基金。")
+    print(f"成功处理 {success_count} 个基金，新增/更新 {total_new_records} 条记录，失败 {len(set(failed_codes))} 个基金。")
     if failed_codes:
         print(f"失败的基金代码: {', '.join(set(failed_codes))}")
     if total_new_records == 0:
