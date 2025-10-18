@@ -10,6 +10,7 @@ import re
 from datetime import datetime, timedelta
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_message
 import concurrent.futures
+import json # 尽管不再用于缓存页码，但仍保留以防万一其他代码使用
 
 # 定义文件路径和目录
 INPUT_FILE = 'C类.txt'
@@ -25,19 +26,19 @@ HEADERS = {
 REQUEST_TIMEOUT = 30 
 REQUEST_DELAY = 0.5  # 初始延迟，动态调整
 MAX_CONCURRENT = 5  # 最大并发基金数量
-FORCE_UPDATE = False  # 是否强制重新抓取
+FORCE_UPDATE = False # 字段保留，但逻辑中已不再使用
 
-# 每次运行脚本最多处理的基金代码数量 (0 表示不限制)
-MAX_FUNDS_PER_RUN = 0  
+# ****** 关键修改 ******
+# 暂时限制每次运行最多处理 10 个基金，用于调试上次运行中大量失败的问题。
+# 调试完成后，请将其改回 0
+MAX_FUNDS_PER_RUN = 10  
 
-# 检查基金数据新鲜度的阈值（如果最新日期比今天早 X 天，就强制从头（page=1）开始爬取）
-# 调整为 5 天，更好地覆盖周末和节假日。
+# 检查基金数据新鲜度的阈值（不再用于强制从头开始，逻辑已简化）
 FRESHNESS_CHECK_DAYS = 5 
 PAGE_SIZE = 20 # 每页记录数
 
 def get_all_fund_codes(file_path):
-    """从 C类.txt 文件中读取基金代码（单列无标题，UTF-8 编码） - 保持不变"""
-    # ... (与之前代码保持一致)
+    """从 C类.txt 文件中读取基金代码（单列无标题，UTF-8 编码）"""
     print(f"尝试读取基金代码文件: {file_path}")
     encodings_to_try = ['utf-8', 'utf-8-sig', 'gbk', 'latin-1']
     df = None
@@ -64,54 +65,26 @@ def get_all_fund_codes(file_path):
     print(f"  -> 找到 {len(valid_codes)} 个有效基金代码。")
     return valid_codes
 
-# --------------------------------------------------------------------------------------
-# 核心优化：直接计算起始页并进行新鲜度检查
-# --------------------------------------------------------------------------------------
+# ****** 核心修改：新的增量起始点判断逻辑 ******
 
-def calculate_start_page(fund_code):
-    """
-    计算基金数据的起始抓取页码。
-    返回: int (1 或基于本地记录数计算的增量页数)
-    """
-    csv_file = os.path.join(OUTPUT_DIR, f"{fund_code}.csv")
-    
-    if FORCE_UPDATE or not os.path.exists(csv_file):
-        print(f"  -> [START_CALC] 基金 {fund_code}：强制更新或无本地文件，从第 1 页开始抓取。")
-        return 1
+def load_latest_date(fund_code):
+    """从本地 CSV 文件中读取现有最新日期"""
+    output_path = os.path.join(OUTPUT_DIR, f"{fund_code}.csv")
+    if os.path.exists(output_path):
+        try:
+            # 确保在读取时正确解析日期
+            df = pd.read_csv(output_path, parse_dates=['date'], encoding='utf-8')
+            if not df.empty:
+                # max() 获取最新日期，normalize() 移除时间分量
+                latest_date = df['date'].max().normalize()
+                print(f"  -> 基金 {fund_code} 现有最新日期: {latest_date.strftime('%Y-%m-%d')}")
+                return latest_date
+        except Exception as e:
+            print(f"  -> 加载 {fund_code} CSV 失败: {e}")
+            # 文件损坏，返回 None 触发从头抓取
+    return None  # 无缓存，或加载失败，从头抓取
 
-    try:
-        # 1. 检查新鲜度
-        local_df = pd.read_csv(csv_file, parse_dates=['date'], encoding='utf-8')
-        
-        if local_df.empty:
-            print(f"  -> [START_CALC] 基金 {fund_code}：本地 CSV 为空，从第 1 页开始抓取。")
-            return 1
-            
-        local_latest_date = local_df['date'].max()
-        today = datetime.now().date()
-        date_threshold = today - timedelta(days=FRESHNESS_CHECK_DAYS)
 
-        if local_latest_date.date() < date_threshold:
-            print(f"  -> [START_CALC] 基金 {fund_code} 判定为【过期】：最新日期 {local_latest_date.date()} 早于阈值 {date_threshold}。从第 1 页开始抓取（利用去重机制高效更新）。")
-            return 1 # 数据过期，从头开始，让 save_to_csv 处理增量和去重
-        else:
-            # 2. 数据新鲜，计算增量更新的起始页码
-            total_records = len(local_df)
-            
-            # 计算总页数。Python 的 // 是向下取整
-            # 100条记录：100/20=5页。 101条记录：101/20=5.05 -> 5+1=6页
-            total_pages_local = (total_records + PAGE_SIZE - 1) // PAGE_SIZE
-            
-            # 回退 2 页以确保获取最新变动，且至少从第 1 页开始
-            start_page = max(1, total_pages_local - 1) 
-            
-            # 打印增量更新信息，使用新的起始页码
-            print(f"  -> [START_CALC] 基金 {fund_code}：数据新鲜 (最新 {local_latest_date.date()})，本地 {total_records} 条记录（约 {total_pages_local} 页）。从第 {start_page} 页开始抓取（增量更新，回退 2 页）。")
-            return start_page
-
-    except Exception as e:
-        print(f"  -> [START_CALC] 基金 {fund_code} 检查失败/文件损坏: {e}。从第 1 页开始抓取。")
-        return 1
 # --------------------------------------------------------------------------------------
 
 
@@ -129,21 +102,24 @@ async def fetch_page(session, url):
         return await response.text()
 
 async def fetch_net_values(fund_code, session, semaphore):
-    """异步获取指定基金代码的【所有】历史净值数据 (分页，异步)"""
+    """
+    使用“最新日期”作为停止条件，实现智能增量更新。
+    从 Page 1 开始抓取，遇到已有数据即停止。
+    """
     print(f"-> [START] 基金代码 {fund_code}")
     
-    # 核心修改：在抓取任务开始前，计算起始页码
-    # 使用 loop.run_in_executor 确保文件 I/O 不阻塞异步循环
-    loop = asyncio.get_event_loop()
-    page_index = await loop.run_in_executor(None, calculate_start_page, fund_code)
-
     async with semaphore:
         all_records = []
+        page_index = 1  # 永远从第 1 页开始抓取
         total_pages = 1
         first_run = True
         dynamic_delay = REQUEST_DELAY
+        
+        # ****** 核心逻辑：获取本地最新日期 ******
+        loop = asyncio.get_event_loop()
+        # 在线程中同步读取 CSV
+        latest_date = await loop.run_in_executor(None, load_latest_date, fund_code) 
 
-        # 如果计算出来的起始页大于 API 总页数，将导致跳过，但通常 API 首次响应会校正 total_pages
 
         while page_index <= total_pages:
             url = BASE_URL.format(fund_code=fund_code, page_index=page_index, per=PAGE_SIZE)
@@ -161,33 +137,50 @@ async def fetch_net_values(fund_code, session, semaphore):
                     records_match = re.search(r'records:(\d+)', text)
                     total_records = int(records_match.group(1)) if records_match else '未知'
                     print(f"   基金 {fund_code} 信息：总页数 {total_pages}，总记录数 {total_records}。")
-                    
-                    if page_index > total_pages:
-                        print(f"   基金 {fund_code} [跳过]：计算的起始页 ({page_index}) > API总页数 ({total_pages})。")
-                        return fund_code, f"增量跳过: 起始页 {page_index} > 总页数 {total_pages}"
-                        
                     first_run = False
                 
                 table = soup.find('table') 
                 if not table:
-                    # 如果当前页不是 API 报告的最后一页，则可能是错误
-                    if page_index < total_pages:
-                         print(f"   基金 {fund_code} 第 {page_index} 页未找到表格数据，提前停止。")
+                    print(f"   基金 {fund_code} [警告]：页面 {page_index} 无表格数据。提前停止。")
                     break
 
                 rows = table.find_all('tr')[1:] 
-                if not rows and page_index < total_pages:
-                    print(f"   基金 {fund_code} 第 {page_index} 页无数据行，提前停止。")
+                if not rows:
+                    print(f"   基金 {fund_code} 第 {page_index} 页无数据行。停止抓取。")
                     break
 
+                page_records = []
+                stop_fetch = False
+                
                 for row in rows:
                     cols = row.find_all('td')
-                    if len(cols) >= 2:
-                        date_str = cols[0].text.strip()
-                        net_value_str = cols[1].text.strip() 
+                    if len(cols) < 2: continue
+                    date_str = cols[0].text.strip()
+                    net_value_str = cols[1].text.strip() 
+                    
+                    if not date_str or not net_value_str or net_value_str == '-': 
+                        continue
                         
-                        if date_str and net_value_str and net_value_str != '-':
-                            all_records.append({'date': date_str, 'net_value': net_value_str})
+                    try:
+                        # 转换日期，并移除时间分量进行比较
+                        date = datetime.strptime(date_str, '%Y-%m-%d').normalize()
+                        
+                        # ****** 核心停止条件 ******
+                        # 如果本地有最新日期，且当前记录日期 <= 最新日期，则停止
+                        if latest_date and date <= latest_date:
+                            stop_fetch = True
+                            break # 退出 for row 循环
+                            
+                        # 如果是新数据，添加到列表
+                        page_records.append({'date': date_str, 'net_value': net_value_str})
+                    except ValueError:
+                        continue # 日期或净值格式错误，跳过该行
+                
+                all_records.extend(page_records)
+                
+                if stop_fetch:
+                    print(f"   基金 {fund_code} [增量停止]：页面 {page_index} 遇到旧数据 ({latest_date.strftime('%Y-%m-%d')})，停止抓取。")
+                    break # 退出 while page_index 循环
                 
                 page_index += 1
                 dynamic_delay = max(REQUEST_DELAY, dynamic_delay * 0.9)
@@ -204,10 +197,12 @@ async def fetch_net_values(fund_code, session, semaphore):
                 return fund_code, f"数据处理错误: {e}"
             
         print(f"-> [COMPLETE] 基金 {fund_code} 数据抓取完毕，共获取 {len(all_records)} 条新记录。")
+        if not all_records:
+            return fund_code, "数据已是最新，无新数据"
         return fund_code, all_records
 
 def save_to_csv(fund_code, data):
-    """将历史净值数据以增量更新方式保存为 CSV 文件，格式为 date,net_value - 保持不变"""
+    """将历史净值数据以增量更新方式保存为 CSV 文件，格式为 date,net_value"""
     output_path = os.path.join(OUTPUT_DIR, f"{fund_code}.csv")
     if not isinstance(data, list) or not data:
         print(f"   基金 {fund_code} 无新数据可保存。")
@@ -217,6 +212,7 @@ def save_to_csv(fund_code, data):
 
     try:
         new_df['net_value'] = pd.to_numeric(new_df['net_value'], errors='coerce').round(4)
+        # 日期已经是字符串格式，直接转为 datetime 对象
         new_df['date'] = pd.to_datetime(new_df['date'], errors='coerce')
         new_df.dropna(subset=['date', 'net_value'], inplace=True)
     except Exception as e:
@@ -226,7 +222,6 @@ def save_to_csv(fund_code, data):
     old_record_count = 0
     if os.path.exists(output_path):
         try:
-            # 确保读取时也用正确的格式，防止去重逻辑失败
             existing_df = pd.read_csv(output_path, parse_dates=['date'], dtype={'net_value': float}, encoding='utf-8')
             old_record_count = len(existing_df)
             combined_df = pd.concat([new_df, existing_df])
@@ -245,9 +240,8 @@ def save_to_csv(fund_code, data):
         final_df.to_csv(output_path, index=False, encoding='utf-8')
         new_record_count = len(final_df)
         newly_added = new_record_count - old_record_count
-        # 如果 old_record_count 不准确（比如文件读取失败），newly_added 可能出错，但总数是准确的。
-        print(f"   -> 基金 {fund_code} [保存完成]：总记录数 {new_record_count} (新增/更新 {newly_added} 条)。")
-        return True, newly_added
+        print(f"   -> 基金 {fund_code} [保存完成]：总记录数 {new_record_count} (新增 {max(0, newly_added)} 条)。")
+        return True, max(0, newly_added)
     except Exception as e:
         print(f"   基金 {fund_code} 保存 CSV 文件 {output_path} 失败: {e}")
         return False, 0
@@ -255,14 +249,13 @@ def save_to_csv(fund_code, data):
 async def fetch_all_funds(fund_codes):
     """异步获取所有基金数据，并在任务完成时立即保存数据"""
     
-    # 移除原有的新鲜度检查阶段，因为计算已移入 fetch_net_values 内部
-    print("\n======== 开始基金数据抓取（自动计算起始页，无需预处理） ========\n")
+    print("\n======== 开始基金数据抓取（基于最新日期实现智能增量更新） ========\n")
 
     semaphore = asyncio.Semaphore(MAX_CONCURRENT)
     loop = asyncio.get_event_loop()
 
     async with ClientSession() as session:
-        # 创建所有异步抓取任务 (fetch_net_values 会在内部计算起始页)
+        # 创建所有异步抓取任务 
         fetch_tasks = [fetch_net_values(fund_code, session, semaphore) for fund_code in fund_codes]
         
         success_count = 0
@@ -305,7 +298,8 @@ async def fetch_all_funds(fund_codes):
                         
                 else:
                     print(f"   基金 {fund_code} [抓取失败/跳过]：{net_values}")
-                    if not str(net_values).startswith('增量跳过'):
+                    # 如果不是提示“数据已是最新”的信息，则计入失败
+                    if not str(net_values).startswith('数据已是最新'):
                          failed_codes.append(fund_code)
 
         return success_count, total_new_records, failed_codes
@@ -339,7 +333,7 @@ def main():
     print(f"本次基金历史净值数据获取和保存完成。")
     print(f"总结: 成功处理 {success_count} 个基金，新增/更新 {total_new_records} 条记录，失败 {len(failed_codes)} 个基金。")
     if failed_codes:
-        print(f"失败的基金代码: {', '.join(failed_codes)}")
+        print(f"失败的基金代码 (本次调试只尝试处理前 {MAX_FUNDS_PER_RUN} 个，如果错误在此，请检查网络或代码有效性): {', '.join(failed_codes)}")
     if total_new_records == 0:
         print("警告: 未新增任何记录，可能是数据已是最新，或 API 无新数据。")
     print(f"==============================")
