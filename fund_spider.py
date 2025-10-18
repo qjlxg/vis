@@ -11,9 +11,9 @@ import math
 from datetime import datetime, timedelta
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_message
 import concurrent.futures
-import json
+# V7 核心依赖：使用 json5 代替内置 json
+import json5 
 import logging
-# V5/V6 核心依赖
 import jsbeautifier
 
 # 配置日志
@@ -40,7 +40,7 @@ MAX_FUNDS_PER_RUN = 0
 PAGE_SIZE = 20
 
 # --------------------------------------------------------------------------------------
-# 辅助函数：JS变量提取和解析 (V6 - 保持 V5 的鲁棒性)
+# 辅助函数：JS变量提取和解析 (V7 - 引入 JSON5)
 # --------------------------------------------------------------------------------------
 
 def extract_simple_var(text, var_name):
@@ -55,9 +55,9 @@ def extract_simple_var(text, var_name):
         return value.lstrip('\ufeff')
     return None
 
-def extract_js_variable_content_v6(text, var_name):
+def extract_js_variable_content_v7(text, var_name):
     """
-    V6 核心：使用栈计数提取复杂的 JS 变量内容 (内容本身)。
+    V7 核心：使用栈计数提取复杂的 JS 变量内容 (内容本身)。
     """
     # 1. 定位到变量赋值的起始位置
     start_match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*', text)
@@ -112,9 +112,9 @@ def extract_js_variable_content_v6(text, var_name):
     logger.error(f"变量 {var_name} 提取失败：栈计数失败。")
     return None
 
-def clean_and_parse_js_object_v6(js_text):
+def clean_and_parse_js_object_v7(js_text):
     """
-    V6 核心解析函数：使用 jsbeautifier 清理 JS 对象字面量，转换为合法 JSON。
+    V7 核心解析函数：使用 jsbeautifier 清理 JS 对象字面量，并使用 json5 解析。
     """
     if not js_text:
         return {}
@@ -126,15 +126,15 @@ def clean_and_parse_js_object_v6(js_text):
     
     # 2. **核心步骤：** 使用 jsbeautifier 格式化/清理 JS 文本
     try:
-        # 尝试美化，如果文本太乱可能失败
+        # 尝试美化，移除注释等
         cleaned_js = jsbeautifier.beautify(text)
     except Exception as e:
         logger.warning(f"jsbeautifier 美化失败: {e}. 尝试不美化进行手动清理。")
         cleaned_js = text # 回退到原始文本
 
     # 3. **激进替换：** 将 JS 单引号字符串替换为 JSON 双引号字符串
+    # 确保内部的双引号被转义
     def replace_single_quotes(match):
-        # 匹配单引号引起来的字符串内容
         return '"' + match.group(1).replace('"', '\\"') + '"'
     
     # 匹配 '...' 格式的字符串
@@ -147,14 +147,17 @@ def clean_and_parse_js_object_v6(js_text):
         return match.group(1) + '"' + match.group(2) + '":'
     
     # 匹配 { 或 , 之后跟着一个合法的 JS 标识符作为键名
+    # 注意：json5 理论上能处理这个，但我们在这里提前修正，以提高鲁棒性。
     cleaned_js = re.sub(r'([\{\,]\s*)([a-zA-Z_]\w*)\s*:', replace_unquoted_keys, cleaned_js)
     
     # 5. 替换 JS 的 true/false/null 为标准 JSON 的 true/false/null (小写)
+    # json5 也能处理，但确保万无一失
     cleaned_js = cleaned_js.replace('True', 'true').replace('False', 'false').replace('Null', 'null')
     
-    # 6. 最终解析
+    # 6. 最终解析 **(V7 关键)**
     try:
-        data = json.loads(cleaned_js)
+        # 使用 json5.loads 进行最宽容的解析
+        data = json5.loads(cleaned_js)
         
         # 处理 Data_fund_info 的常见格式：数组包含单个对象 [ {...} ]
         if isinstance(data, list) and data and isinstance(data[0], dict):
@@ -162,20 +165,18 @@ def clean_and_parse_js_object_v6(js_text):
 
         return data
         
-    except json.JSONDecodeError as e:
-        logger.error(f"最终 JSON 解析失败: {e}. 请检查数据结构。文本片段: {cleaned_js[:100]}...")
-        return {}
     except Exception as e:
-        logger.error(f"解析过程中发生通用错误: {e}")
+        # 捕获所有解析错误
+        logger.error(f"最终 JSON5 解析失败: {e}. 请检查数据结构。文本片段: {cleaned_js[:100]}...")
         return {}
 
 
 # --------------------------------------------------------------------------------------
-# 基金信息抓取核心逻辑 (V6 - 采用多变量自适应提取策略)
+# 基金信息抓取核心逻辑 (V7 - 采用多变量自适应提取策略)
 # --------------------------------------------------------------------------------------
 
 async def fetch_fund_info(fund_code, session, semaphore):
-    """异步抓取基金基本信息，使用 V6 多变量自适应提取逻辑"""
+    """异步抓取基金基本信息，使用 V7 多变量自适应提取逻辑"""
     print(f"    -> 开始抓取基金 {fund_code} 的基本信息")
     url = BASE_URL_INFO_JS.format(fund_code=fund_code)
     
@@ -190,6 +191,7 @@ async def fetch_fund_info(fund_code, session, semaphore):
     async with semaphore:
         try:
             await asyncio.sleep(REQUEST_DELAY * 0.5)
+            # 使用 V7 的提取器
             js_text = await fetch_js_page(session, url)
             
             # 1. 提取简单变量
@@ -204,25 +206,25 @@ async def fetch_fund_info(fund_code, session, semaphore):
             data_main = {}
             data_manager = {}
             
-            # 2. **V6 核心：** 尝试从所有可能的变量中提取数据
+            # 2. **V7 核心：** 尝试从所有可能的变量中提取数据 (使用 V7 解析器)
             
             # A. 提取并解析 Data_managerInfo (经理信息最可靠来源)
-            data_manager_str = extract_js_variable_content_v6(js_text, 'Data_managerInfo')
+            data_manager_str = extract_js_variable_content_v7(js_text, 'Data_managerInfo')
             if data_manager_str:
-                 data_manager = clean_and_parse_js_object_v6(data_manager_str)
+                 data_manager = clean_and_parse_js_object_v7(data_manager_str)
             
             # B. 提取并解析 apidata (估值、公司、成立日期等信息)
-            data_main_str = extract_js_variable_content_v6(js_text, 'apidata')
+            data_main_str = extract_js_variable_content_v7(js_text, 'apidata')
             if data_main_str:
-                 data_main = clean_and_parse_js_object_v6(data_main_str)
+                 data_main = clean_and_parse_js_object_v7(data_main_str)
 
             # C. 提取并解析 Data_fund_info (传统信息来源，作为补充)
-            data_info_str = extract_js_variable_content_v6(js_text, 'Data_fund_info')
+            data_info_str = extract_js_variable_content_v7(js_text, 'Data_fund_info')
             if data_info_str:
-                 data_info = clean_and_parse_js_object_v6(data_info_str)
+                 data_info = clean_and_parse_js_object_v7(data_info_str)
 
 
-            # 3. **V6 核心：** 整合最终结果，按优先级合并信息
+            # 3. **V7 核心：** 整合最终结果，按优先级合并信息
             
             manager_name = '未知'
             # 优先级1: Data_managerInfo (数组)
@@ -234,7 +236,11 @@ async def fetch_fund_info(fund_code, session, semaphore):
             # 优先级3: Data_fund_info (旧结构)
             elif 'FundManager' in data_info:
                  if isinstance(data_info['FundManager'], list) and data_info['FundManager']:
-                     manager_name = data_info['FundManager'][0].get('name', '未知')
+                     # 有些是 {'name': '张三'}，有些是 ['张三']
+                     if isinstance(data_info['FundManager'][0], dict):
+                         manager_name = data_info['FundManager'][0].get('name', '未知')
+                     elif isinstance(data_info['FundManager'][0], str):
+                         manager_name = data_info['FundManager'][0]
 
             
             # 公司名称：apidata > Data_fund_info
@@ -284,9 +290,8 @@ async def fetch_fund_info(fund_code, session, semaphore):
             logger.error(f"基金 {fund_code} 抓取失败的详情: {e}")
             return fund_code, default_result
 
-# --------------------------------------------------------------------------------------
-# 文件读取、缓存和动态数据抓取逻辑 (其余保持不变)
-# --------------------------------------------------------------------------------------
+
+# 以下代码与 V6 保持一致，无需更改（包括文件读取、缓存、净值抓取等逻辑）...
 
 def get_all_fund_codes(file_path):
     """从 C类.txt 文件中读取基金代码"""
