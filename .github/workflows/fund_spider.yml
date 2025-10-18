@@ -1,81 +1,16 @@
-name: 净值更新 Fetch Fund Net Value Data
-
-# 定义触发条件
-on:
-  # 手动触发
-  workflow_dispatch:
-  # 当 fund_spider.py 或 C类.txt 有变动时触发
-  push:
-    paths:
-      - '.github/workflows/fund_spider.yml'
-      - 'fund_spider.py'
-      - 'C类.txt'
-  # 定时触发（例如每 10 小时一次）
-  schedule:
-      - cron: '0 */10 * * *'
-
-jobs:
-  update-data:
-    runs-on: ubuntu-latest
-    
-    steps:
-      # 步骤 1: 检出仓库代码 (关键修改: 添加权限)
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          # 授予 actions 令牌写入权限
-          token: ${{ secrets.GITHUB_TOKEN }}
-          persist-credentials: true
-
-      # 步骤 2: 设置 Python 环境
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
-      # 步骤 3: 缓存 Python 依赖
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      # 步骤 4: 安装依赖库
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          # 确保安装了所有依赖，包括用于异步抓取、解析和重试的库
-          pip install pandas requests beautifulsoup4 aiohttp lxml tenacity
-      
-      # 步骤 5：设置 Git 提交身份
-      - name: Configure Git identity
-        run: |
-          # 使用 Actions 机器人作为提交者
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      # 步骤 6: 运行 Python 爬虫脚本
-      - name: Run fund spider script
-        run: |
-          python fund_spider.py
-        # 允许此步骤失败，但工作流继续执行，以便提交已保存的数据
-        continue-on-error: true 
-
-      # 步骤 7: 提交和推送新数据
+# 步骤 7: 提交和推送新数据
       - name: Commit and Push new data
         # 无论前面步骤结果如何，都执行此步骤
         if: always()
         run: |
-          echo "Checking for new/updated files (CSV and fund_info.json)..."
+          echo "Checking for new/updated files (CSV and fund_info.csv)..."
           
           # 检查 fund_data 目录是否存在且包含 CSV 文件 (主要检查)
-          # 注意：fund_info.json 文件不在 fund_data 目录下
-          if [ -d "fund_data" ] && [ "$(ls -A fund_data/*.csv 2>/dev/null | wc -l)" -gt 0 ] || [ -f "fund_info.json" ]; then
+          # 注意：fund_info.csv 文件不在 fund_data 目录下
+          if [ -d "fund_data" ] && [ "$(ls -A fund_data/*.csv 2>/dev/null | wc -l)" -gt 0 ] || [ -f "fund_info.csv" ]; then
               
-              # *** 关键更新：同时添加 fund_data/*.csv 和 fund_info.json ***
-              git add fund_data/*.csv fund_info.json || true
+              # *** 关键更新：同时添加 fund_data/*.csv 和 fund_info.csv ***
+              git add fund_data/*.csv fund_info.csv || true
               
               # 检查是否有文件待提交
               if ! git diff --quiet --cached; then
@@ -94,5 +29,5 @@ jobs:
                   echo "No changes found to commit."
               fi
           else
-              echo "fund_data directory not found, is empty, or no fund_info.json generated. Skipping commit."
+              echo "fund_data directory not found, is empty, or no fund_info.csv generated. Skipping commit."
           fi
