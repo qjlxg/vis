@@ -22,19 +22,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: Set up Python 3.12 (Recommended)
+        # 将版本更新至 3.12，以兼容最新版 pandas-ta
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'  # 保持 Python 3.10
+          python-version: '3.12' 
 
       - name: Install dependencies
         run: |
-          # 确保 git 可用，用于从 GitHub 安装
-          sudo apt-get update
-          sudo apt-get install git -y
-          
-          # 修正: 从 GitHub 仓库安装兼容 Python 3.10 的 0.3.14b 版本
-          pip install akshare pandas git+https://github.com/twopirllc/pandas-ta.git@v0.3.14b
+          # 移除 git 安装和复杂路径。在 Python 3.12 环境下，
+          # pip 将能直接安装最新的 pandas-ta 版本。
+          pip install akshare pandas pandas-ta
         continue-on-error: false
         shell: bash
 
