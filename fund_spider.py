@@ -19,11 +19,10 @@ BASE_URL_NET_VALUE = "http://fundf10.eastmoney.com/F10DataApi.aspx?type=lsjz&cod
 BASE_URL_INFO = "http://fund.eastmoney.com/{fund_code}.html"
 INFO_CACHE_FILE = 'fund_info.csv'
 
-# 设置请求头（更新为最新Chrome User-Agent）
+# 设置请求头
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
     'Referer': 'http://fund.eastmoney.com/',
-    'Accept-Language': 'zh-CN,zh;q=0.9',
 }
 
 REQUEST_TIMEOUT = 30
@@ -132,7 +131,7 @@ async def fetch_html_page(session, url):
         return await response.text()
 
 async def fetch_fund_info(fund_code, session, semaphore):
-    """异步抓取基金基本信息（修复版：使用正则从文本提取详情）"""
+    """异步抓取基金基本信息"""
     print(f"   -> 开始抓取基金 {fund_code} 的基本信息")
     url = BASE_URL_INFO.format(fund_code=fund_code)
     async with semaphore:
@@ -141,30 +140,59 @@ async def fetch_fund_info(fund_code, session, semaphore):
             html = await fetch_html_page(session, url)
             soup = BeautifulSoup(html, 'lxml')
             
-            # 1. 基金名称（更新正则，移除代码）
+            # 1. 基金名称 (这部分逻辑保持不变)
             name_tag = soup.find('div', class_='fundDetail-tit')
             if name_tag:
-                full_name = name_tag.text.strip()
-                fund_name = re.sub(r'\s*\(\d{6}\)$', '', full_name).strip()  # 更新正则匹配无空格的(021909)
+                full_name = name_tag.find('div').text.strip()
+                fund_name = re.sub(r'\(\d+\)$|\s\d+$', '', full_name).strip()
             else:
                 fund_name = '未知名称'
 
-            # 2. 使用正则从HTML文本提取详情（因为表格class可能变了）
-            patterns = {
-                'type': r'类型[：:]\s*([^|]+?)\s*\|',
-                'establish_date': r'成\s*立\s*日[：:]\s*([^\s|]+)',
-                'manager': r'管\s*理\s*人[：:]\s*([^\s|]+)'
-            }
-            fund_type = re.search(patterns['type'], html, re.DOTALL).group(1).strip() if re.search(patterns['type'], html, re.DOTALL) else '未知'
-            establish_date = re.search(patterns['establish_date'], html, re.DOTALL).group(1).strip() if re.search(patterns['establish_date'], html, re.DOTALL) else '未知'
-            manager = re.search(patterns['manager'], html, re.DOTALL).group(1).strip() if re.search(patterns['manager'], html, re.DOTALL) else '未知'
+            # 2. 基金详情信息 (修复：旧的 table.info.w790 结构已失效)
+            fund_type = '未知'
+            establish_date = '未知'
+            manager = '未知'
+
+            # 寻找包含基金信息的区域 (通常是 class="dataOfFund" 或 "infoOfFund")
+            info_area = soup.find('div', class_='dataOfFund') or soup.find('div', class_='infoOfFund') or soup.find('div', class_='bs_jx_box')
+
+            if info_area:
+                # 提取容器内的所有文本，并进行清洗，便于正则匹配
+                text_content = info_area.get_text()
+                text_content = text_content.replace('\xa0', '').replace('\n', '').replace(' ', '')
+
+                # --- 提取 类型 ---
+                # 匹配 '类型：' 到下一个关键信息（如'|'、'中高风险'或'规模'）之间的内容
+                type_match = re.search(r'类型：(.*?)(?:\||中高风险|规模)', text_content)
+                if type_match:
+                    fund_type = type_match.group(1).strip()
+                
+                # --- 提取 基金经理 ---
+                # 尝试查找 a 标签，因为基金经理名字通常带有链接
+                manager_tag = info_area.find('a', href=re.compile(r'/manager/'))
+                if manager_tag:
+                    manager = manager_tag.text.strip()
+                else:
+                    # 备用：使用正则从文本中提取
+                    manager_match = re.search(r'基金经理：(.*?)(?:成|管|基金评级)', text_content)
+                    if manager_match:
+                        manager = manager_match.group(1).strip()
+                        # 清理掉可能存在的日期或不必要的字符
+                        manager = re.sub(r'[\d\s\W]*', '', manager)
+                        
+                # --- 提取 成立日期 ---
+                # 匹配 '成 立 日：' 后的日期格式 (YYYY-MM-DD)
+                date_match = re.search(r'成[\s\S]*日：(\d{4}-\d{2}-\d{2})', text_content)
+                if date_match:
+                    establish_date = date_match.group(1).strip()
             
+            # 3. 构造结果字典
             result = {
                 'code': fund_code,
                 'name': fund_name,
                 'type': fund_type,
                 'establish_date': establish_date,
-                'manager': manager
+                'manager': manager # 提取的是基金经理，而非管理人
             }
             print(f"   -> 基金 {fund_code} 基本信息抓取成功")
             return fund_code, result
