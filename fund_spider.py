@@ -13,13 +13,15 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 import concurrent.futures
 import json
 import logging
+# V5 核心依赖
+import jsbeautifier
 
-# 配置日志：保持 INFO 级别，以便查看详细的提取成功/失败信息
+# 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # 定义文件路径和目录
-INPUT_FILE = 'C类.txt'
+INPUT_FILE = 'C类.txt' # 请确保您的基金代码文件名为 C类.txt
 OUTPUT_DIR = 'fund_data'
 BASE_URL_NET_VALUE = "http://fundf10.eastmoney.com/F10DataApi.aspx?type=lsjz&code={fund_code}&page={page_index}&per=20"
 BASE_URL_INFO_JS = "http://fund.eastmoney.com/pingzhongdata/{fund_code}.js"
@@ -38,7 +40,7 @@ MAX_FUNDS_PER_RUN = 0
 PAGE_SIZE = 20
 
 # --------------------------------------------------------------------------------------
-# 辅助函数：JS变量提取和解析 (最终优化 V4 - 核心变化)
+# 辅助函数：JS变量提取和解析 (V5 - 引入 jsbeautifier)
 # --------------------------------------------------------------------------------------
 
 def extract_simple_var(text, var_name):
@@ -46,17 +48,19 @@ def extract_simple_var(text, var_name):
     match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*(.*?);', text, re.DOTALL)
     if match:
         value = match.group(1).strip()
+        # 清理引号和 BOM
         if (value.startswith('"') and value.endswith('"')) or \
            (value.startswith("'") and value.endswith("'")):
             return value[1:-1].lstrip('\ufeff')
-        return value
+        return value.lstrip('\ufeff')
     return None
 
-def extract_js_variable_content(text, var_name):
+def extract_js_variable_content_v5(text, var_name):
     """
-    V4 核心：通过括号计数来提取复杂 JS 变量，失败时回退到宽泛正则，确保鲁棒性。
+    V5 核心：使用栈计数提取复杂的 JS 变量内容 (内容本身)，不进行清理。
+    清理工作交给 clean_and_parse_js_object_v5。
     """
-    # 1. 精确定位到变量赋值的起始位置
+    # 1. 定位到变量赋值的起始位置
     start_match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*', text)
     if not start_match:
         return None
@@ -73,50 +77,45 @@ def extract_js_variable_content(text, var_name):
 
     start_char = text[content_start_index] # 应该是 [ 或 {
     
-    # --- 尝试使用栈计数法 (最可靠) ---
-    if start_char in ['[', '{']:
-        end_char = ']' if start_char == '[' else '}'
-        balance = 0
-        content_end_index = -1
-        
-        for i in range(content_start_index, len(text)):
-            char = text[i]
-            
-            if char == start_char:
-                balance += 1
-            elif char == end_char:
-                balance -= 1
-            
-            if balance == 0 and i > content_start_index:
-                content_end_index = i
-                break
-                
-        if content_end_index != -1:
-            data_str = text[content_start_index : content_end_index + 1].strip()
-            
-            # 清理尾部可能的注释 /*...*/ 或 //...
-            data_str = re.sub(r'\s*/\*.*$', '', data_str, re.DOTALL).strip()
-            data_str = re.sub(r'\s*//.*$', '', data_str, re.MULTILINE).strip()
-            
-            logger.info(f"成功使用栈计数提取变量 {var_name}")
-            return data_str
+    if start_char not in ['[', '{']:
+        # 如果不是标准的对象或数组开头，尝试回退到宽泛正则
+        match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*(.*?)\s*;', text, re.DOTALL)
+        return match.group(1).strip() if match else None
+
+    # --- 使用栈计数法 (确保提取的结构完整性) ---
+    end_char = ']' if start_char == '[' else '}'
+    balance = 0
+    content_end_index = -1
     
-    # --- 栈计数失败/不适用，回退到宽泛正则匹配 (容错) ---
-    logger.warning(f"变量 {var_name} 栈计数提取失败或不适用，回退到宽泛正则。")
-    # 匹配 var var_name = ... ;
-    match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*(.*?)\s*;', text, re.DOTALL)
-    if match:
-        data_str = match.group(1).strip()
-        # 强制清理尾部多余的 JS 注释
-        data_str = re.sub(r'\s*/\*.*$', '', data_str, re.DOTALL).strip()
-        return data_str
+    # 增加一个检查，确保我们只在最外层计数
+    for i in range(content_start_index, len(text)):
+        char = text[i]
         
-    logger.error(f"变量 {var_name} 提取失败：栈计数和正则均无效。")
+        if char == start_char:
+            balance += 1
+        elif char == end_char:
+            balance -= 1
+        
+        if balance == 0 and i > content_start_index:
+            content_end_index = i
+            break
+            
+    if content_end_index != -1:
+        data_str = text[content_start_index : content_end_index + 1].strip()
+        
+        # 清理尾部可能的注释 /*...*/ 或 //...
+        data_str = re.sub(r'\s*/\*.*$', '', data_str, re.DOTALL).strip()
+        data_str = re.sub(r'\s*//.*$', '', data_str, re.MULTILINE).strip()
+        
+        logger.info(f"成功使用栈计数提取变量 {var_name}")
+        return data_str
+    
+    logger.error(f"变量 {var_name} 提取失败：栈计数失败。")
     return None
 
-def clean_and_parse_js_object(js_text):
+def clean_and_parse_js_object_v5(js_text):
     """
-    核心解析函数：清理 JS 对象字面量中的非标准 JSON 格式，并尝试解析为 Python 字典。
+    V5 核心解析函数：使用 jsbeautifier 清理 JS 对象字面量，转换为合法 JSON。
     """
     if not js_text:
         return {}
@@ -126,26 +125,39 @@ def clean_and_parse_js_object(js_text):
     # 1. 移除 BOM (Byte Order Mark)
     text = text.lstrip('\ufeff')
     
-    # 2. **激进替换：** 替换所有单引号为双引号
-    text = text.replace("'", '"')
+    # 2. **核心步骤：** 使用 jsbeautifier 格式化/清理 JS 文本
+    # 这会移除注释，标准化空格，并有助于后续处理
+    try:
+        # 尝试美化，如果文本太乱可能失败
+        cleaned_js = jsbeautifier.beautify(text)
+    except Exception as e:
+        logger.warning(f"jsbeautifier 美化失败: {e}. 尝试不美化进行手动清理。")
+        cleaned_js = text # 回退到原始文本
+
+    # 3. **激进替换：** 将 JS 单引号字符串替换为 JSON 双引号字符串
+    # 注意：这可能会破坏包含双引号的单引号字符串，但对于天天基金的结构是有效的。
+    def replace_single_quotes(match):
+        # 匹配单引号引起来的字符串内容
+        return '"' + match.group(1).replace('"', '\\"') + '"'
     
-    # 3. 替换 JS 的 true/false/null 为标准 JSON 的 true/false/null (小写)
-    text = text.replace('true', 'true').replace('false', 'false').replace('null', 'null')
+    # 匹配 '...' 格式的字符串
+    cleaned_js = re.sub(r"'(.*?)'", replace_single_quotes, cleaned_js)
     
-    # 4. **核心修复：** 将无引号的键名 (key:) 替换为带双引号的键名 ("key":)
+    # 4. **核心修复：** 使用正则将无引号的键名替换为带双引号的键名 ("key":)
     def replace_unquoted_keys(match):
         # match.group(1) 是定界符 { 或 ,
         # match.group(2) 是键名 (字母数字下划线开头)
         return match.group(1) + '"' + match.group(2) + '":'
     
     # 匹配 { 或 , 之后跟着一个合法的 JS 标识符作为键名
-    text = re.sub(r'([\{\,]\s*)([a-zA-Z_]\w*)\s*:', replace_unquoted_keys, text)
+    cleaned_js = re.sub(r'([\{\,]\s*)([a-zA-Z_]\w*)\s*:', replace_unquoted_keys, cleaned_js)
     
-    # 5. **特殊清理：** 移除所有 JS 单行和多行注释
-    text = re.sub(r'//.*?\n|/\*.*?\*/', '', text, flags=re.DOTALL)
-
+    # 5. 替换 JS 的 true/false/null 为标准 JSON 的 true/false/null (小写)
+    cleaned_js = cleaned_js.replace('True', 'true').replace('False', 'false').replace('Null', 'null')
+    
+    # 6. 最终解析
     try:
-        data = json.loads(text)
+        data = json.loads(cleaned_js)
         
         # 处理 Data_fund_info 的常见格式：数组包含单个对象 [ {...} ]
         if isinstance(data, list) and data and isinstance(data[0], dict):
@@ -154,18 +166,18 @@ def clean_and_parse_js_object(js_text):
         return data
         
     except json.JSONDecodeError as e:
-        logger.error(f"最终 JSON 解析失败: {e}. 请检查数据结构是否符合 JS 对象字面量格式。文本片段: {text[:100]}...")
+        logger.error(f"最终 JSON 解析失败: {e}. 请检查数据结构。文本片段: {cleaned_js[:100]}...")
         return {}
     except Exception as e:
         logger.error(f"解析过程中发生通用错误: {e}")
         return {}
 
 # --------------------------------------------------------------------------------------
-# 基金信息抓取核心逻辑 (使用 V4 稳定提取逻辑)
+# 基金信息抓取核心逻辑 (使用 V5 稳定提取逻辑)
 # --------------------------------------------------------------------------------------
 
 async def fetch_fund_info(fund_code, session, semaphore):
-    """异步抓取基金基本信息，使用 V4 稳定提取逻辑"""
+    """异步抓取基金基本信息，使用 V5 稳定提取逻辑"""
     print(f"    -> 开始抓取基金 {fund_code} 的基本信息")
     url = BASE_URL_INFO_JS.format(fund_code=fund_code)
     
@@ -189,17 +201,17 @@ async def fetch_fund_info(fund_code, session, semaphore):
             fund_rate = extract_simple_var(js_text, 'fund_Rate')
             fund_minsg = extract_simple_var(js_text, 'fund_minsg')
             
-            # 2. 提取并解析 Data_fund_info 
+            # 2. 提取并解析 Data_fund_info (使用 V5 解析)
             data_info = {}
-            data_info_str = extract_js_variable_content(js_text, 'Data_fund_info')
+            data_info_str = extract_js_variable_content_v5(js_text, 'Data_fund_info')
             if data_info_str:
-                 data_info = clean_and_parse_js_object(data_info_str)
+                 data_info = clean_and_parse_js_object_v5(data_info_str)
             
-            # 3. 提取并解析 apidata 
+            # 3. 提取并解析 apidata (使用 V5 解析)
             data_main = {}
-            data_main_str = extract_js_variable_content(js_text, 'apidata')
+            data_main_str = extract_js_variable_content_v5(js_text, 'apidata')
             if data_main_str:
-                 data_main = clean_and_parse_js_object(data_main_str)
+                 data_main = clean_and_parse_js_object_v5(data_main_str)
 
             # 4. 整理最终结果
             
@@ -245,10 +257,10 @@ async def fetch_fund_info(fund_code, session, semaphore):
             }
             
             # 检查核心字段是否成功提取
-            if result['基金经理'] != '未知' and result['公司名称'] != '未知':
+            if result['基金经理'] != '未知' and result['公司名称'] != '未知' and result['名称'] != '抓取失败':
                  print(f"    -> 基金 {fund_code} 基本信息抓取成功 (名称: {result['名称']} | 公司: {result['公司名称']} | 经理: {result['基金经理']})")
             else:
-                 print(f"    -> 基金 {fund_code} 基本信息抓取完成，但核心字段缺失 (经理: {result['基金经理']} | 公司: {result['公司名称']})")
+                 print(f"    -> 基金 {fund_code} 基本信息抓取完成，但核心字段缺失 (经理: {result['基金经理']} | 公司: {result['公司名称']} | 名称: {result['名称']})")
 
             return fund_code, result
 
@@ -308,10 +320,6 @@ def load_info_cache():
         return {}
 
     try:
-        # 使用文件路径中提供的 fund_info (5).csv 文件，如果用户提供过这个文件
-        # if os.path.exists('fund_info (5).csv'):
-        #     file_to_load = 'fund_info (5).csv'
-        # else:
         file_to_load = INFO_CACHE_FILE
         
         df = pd.read_csv(file_to_load, dtype={'代码': str}, encoding='utf-8')
@@ -393,6 +401,7 @@ async def fetch_and_cache_fund_info(fund_codes):
     async with ClientSession() as session:
         fetch_tasks = [fetch_fund_info(code, session, semaphore) for code in codes_to_fetch]
         
+        # 实时更新缓存，而不是等待所有任务完成
         for future in asyncio.as_completed(fetch_tasks):
             code, result = await future
             info_cache[code] = result
