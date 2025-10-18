@@ -19,11 +19,10 @@ BASE_URL_NET_VALUE = "http://fundf10.eastmoney.com/F10DataApi.aspx?type=lsjz&cod
 BASE_URL_INFO = "http://fund.eastmoney.com/{fund_code}.html"
 INFO_CACHE_FILE = 'fund_info.csv'
 
-# 设置请求头（更新为最新Chrome User-Agent）
+# 设置请求头
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
     'Referer': 'http://fund.eastmoney.com/',
-    'Accept-Language': 'zh-CN,zh;q=0.9',
 }
 
 REQUEST_TIMEOUT = 30
@@ -132,7 +131,7 @@ async def fetch_html_page(session, url):
         return await response.text()
 
 async def fetch_fund_info(fund_code, session, semaphore):
-    """异步抓取基金基本信息（修复版：使用正则从文本提取详情）"""
+    """异步抓取基金基本信息"""
     print(f"   -> 开始抓取基金 {fund_code} 的基本信息")
     url = BASE_URL_INFO.format(fund_code=fund_code)
     async with semaphore:
@@ -141,24 +140,62 @@ async def fetch_fund_info(fund_code, session, semaphore):
             html = await fetch_html_page(session, url)
             soup = BeautifulSoup(html, 'lxml')
             
-            # 1. 基金名称（更新正则，移除代码）
+            # --- 1. 基金名称 ---
             name_tag = soup.find('div', class_='fundDetail-tit')
             if name_tag:
-                full_name = name_tag.text.strip()
-                fund_name = re.sub(r'\s*\(\d{6}\)$', '', full_name).strip()  # 更新正则匹配无空格的(021909)
+                # 提取标题 div 中的第一个 div 的文本
+                full_name = name_tag.find('div', style="float: left").text.strip()
+                # 去除末尾的基金代码 (021909)
+                fund_name = re.sub(r'\(\d+\)$|\s\d+$', '', full_name).strip()
             else:
                 fund_name = '未知名称'
 
-            # 2. 使用正则从HTML文本提取详情（因为表格class可能变了）
-            patterns = {
-                'type': r'类型[：:]\s*([^|]+?)\s*\|',
-                'establish_date': r'成\s*立\s*日[：:]\s*([^\s|]+)',
-                'manager': r'管\s*理\s*人[：:]\s*([^\s|]+)'
-            }
-            fund_type = re.search(patterns['type'], html, re.DOTALL).group(1).strip() if re.search(patterns['type'], html, re.DOTALL) else '未知'
-            establish_date = re.search(patterns['establish_date'], html, re.DOTALL).group(1).strip() if re.search(patterns['establish_date'], html, re.DOTALL) else '未知'
-            manager = re.search(patterns['manager'], html, re.DOTALL).group(1).strip() if re.search(patterns['manager'], html, re.DOTALL) else '未知'
+            # --- 2. 基金详情信息 (根据用户提供的HTML进行精确修复) ---
+            fund_type = '未知'
+            establish_date = '未知'
+            manager = '未知'
+
+            # 关键信息位于 class="infoOfFund" 的 table 中
+            info_table = soup.find('div', class_='infoOfFund').find('table')
             
+            if info_table:
+                # 提取所有行
+                rows = info_table.find_all('tr')
+                
+                # 遍历每一行来查找信息
+                for row in rows:
+                    cols = row.find_all('td')
+                    if not cols:
+                        continue
+                    
+                    # --- 提取 类型 ---
+                    # 类型在第一行第一个 td 中
+                    if '类型：' in cols[0].text:
+                        # 文本格式如：类型：<a href="...">指数型-股票</a>&nbsp;&nbsp;|&nbsp;&nbsp;中高风险
+                        type_match = re.search(r'类型：(.*?)(?:\&nbsp|\|)', cols[0].text, re.DOTALL)
+                        if type_match:
+                            fund_type = type_match.group(1).strip()
+                            # 进一步清理可能残余的链接文本或多余空格
+                            if fund_type.startswith('<a'):
+                                type_tag = cols[0].find('a')
+                                fund_type = type_tag.text.strip() if type_tag else '未知'
+                            
+                    # --- 提取 基金经理 ---
+                    # 基金经理在第一行第三个 td 中
+                    if '基金经理：' in cols[2].text:
+                        # 文本格式如：基金经理：<a href="...">寇斌权</a>
+                        manager_tag = cols[2].find('a')
+                        manager = manager_tag.text.strip() if manager_tag else cols[2].text.replace('基金经理：', '').strip()
+
+                    # --- 提取 成立日期 ---
+                    # 成立日期在第二行第一个 td 中
+                    if '成 立 日：' in cols[0].text and '成 立 日：' not in fund_type:
+                        # 文本格式如：<span class="letterSpace01">成 立 日</span>：2024-08-27
+                        date_match = re.search(r'(\d{4}-\d{2}-\d{2})', cols[0].text)
+                        if date_match:
+                            establish_date = date_match.group(1).strip()
+                            
+            # 3. 构造结果字典
             result = {
                 'code': fund_code,
                 'name': fund_name,
