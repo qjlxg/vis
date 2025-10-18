@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install akshare pandas matplotlib
+          pip install akshare pandas
 
       - name: Run script
         run: python index_volume.py
@@ -30,7 +30,7 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git add .
-          git commit -m "Add daily index volume data and charts - $(date +%Y%m%d)" || echo "No changes to commit"
+          git commit -m "Add daily index volume data and history tables - $(date +%Y%m%d)" || echo "No changes to commit"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
