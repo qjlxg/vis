@@ -19,8 +19,8 @@ OUTPUT_DIR = 'fund_data'
 BASE_URL_NET_VALUE = "http://fundf10.eastmoney.com/F10DataApi.aspx?type=lsjz&code={fund_code}&page={page_index}&per=20"
 # 基金详情页 URL
 BASE_URL_INFO = "http://fund.eastmoney.com/{fund_code}.html"
-# 基本信息缓存文件
-INFO_CACHE_FILE = 'fund_info.json'
+# 基本信息缓存文件 (***修改为 CSV***)
+INFO_CACHE_FILE = 'fund_info.csv'
 
 
 # 设置请求头
@@ -30,16 +30,16 @@ HEADERS = {
 }
 
 REQUEST_TIMEOUT = 30 
-REQUEST_DELAY = 0.5  # 初始延迟，动态调整
-MAX_CONCURRENT = 5  # 最大并发基金数量
+REQUEST_DELAY = 0.5 
+MAX_CONCURRENT = 5  
 
 # 调试修复后的代码，暂时限制处理数量 (请根据需要改回 0)
-MAX_FUNDS_PER_RUN = 10  
+MAX_FUNDS_PER_RUN = 0 
 
-PAGE_SIZE = 20 # 每页记录数
+PAGE_SIZE = 20 
 
 def get_all_fund_codes(file_path):
-    """从 C类.txt 文件中读取基金代码（单列无标题，UTF-8 编码）"""
+    """从 C类.txt 文件中读取基金代码"""
     print(f"尝试读取基金代码文件: {file_path}")
     encodings_to_try = ['utf-8', 'utf-8-sig', 'gbk', 'latin-1']
     df = None
@@ -71,21 +71,49 @@ def get_all_fund_codes(file_path):
 # --------------------------------------------------------------------------------------
 
 def load_info_cache():
-    """加载基金基本信息缓存"""
+    """加载基金基本信息缓存 (从 CSV 文件)"""
     if os.path.exists(INFO_CACHE_FILE):
         try:
-            with open(INFO_CACHE_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
+            # 读取 CSV 文件
+            df = pd.read_csv(INFO_CACHE_FILE, dtype={'code': str}, encoding='utf-8')
+            if df.empty:
+                return {}
+            # 将 DataFrame 转换为 {code: {name: ..., type: ..., ...}} 的字典格式
+            df.set_index('code', inplace=True)
+            info_cache = df.to_dict('index')
+            print(f"  -> 成功从 {INFO_CACHE_FILE} 加载 {len(info_cache)} 条缓存记录。")
+            return info_cache
         except Exception as e:
             print(f"[警告] 加载基本信息缓存失败: {e}。将从头抓取。")
             return {}
     return {}
 
 def save_info_cache(cache):
-    """保存基金基本信息缓存"""
+    """保存基金基本信息缓存 (到 CSV 文件)"""
+    if not cache:
+        print("[警告] 基本信息缓存为空，不保存。")
+        return
+
     try:
-        with open(INFO_CACHE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(cache, f, ensure_ascii=False, indent=4)
+        # 将字典转换为 DataFrame
+        df = pd.DataFrame.from_dict(cache, orient='index')
+        # 确保 code 成为单独的一列 (从 index 移出)
+        df.reset_index(inplace=True)
+        df.rename(columns={'index': 'code'}, inplace=True)
+        
+        # 排序并确保 code 字段是第一列
+        df['code'] = df['code'].astype(str)
+        # 调整列的顺序，确保 code, name, type, ... 在最前面
+        cols = ['code', 'name', 'type', 'establish_date', 'manager']
+        # 确保 DataFrame 中包含所有 cols，并处理可能缺失的列
+        for col in cols:
+            if col not in df.columns:
+                df[col] = '未知'
+        
+        df = df[cols + [col for col in df.columns if col not in cols]]
+        
+        # 保存为 CSV
+        df.to_csv(INFO_CACHE_FILE, index=False, encoding='utf-8')
         print(f"  -> 成功保存基本信息缓存到 {INFO_CACHE_FILE}")
     except Exception as e:
         print(f"[错误] 保存基本信息缓存失败: {e}")
@@ -108,13 +136,23 @@ async def fetch_fund_info(fund_code, session, semaphore):
     url = BASE_URL_INFO.format(fund_code=fund_code)
     async with semaphore:
         try:
+            await asyncio.sleep(REQUEST_DELAY * 0.5) # 稍微降低爬取速度
+            
             # 抓取页面
             html = await fetch_html_page(session, url)
             soup = BeautifulSoup(html, 'lxml')
             
             # 1. 基金名称
             name_tag = soup.find('div', class_='fundDetail-tit')
-            fund_name = name_tag.find('div').text.strip() if name_tag else '未知名称'
+            # 提取名称并清理代码部分
+            if name_tag:
+                 full_name = name_tag.find('div').text.strip()
+                 # 尝试移除末尾的代码和括号 (如: (000404) 或 000404)
+                 fund_name = re.sub(r'\(\d+\)$', '', full_name).strip()
+                 if fund_name == full_name:
+                    fund_name = re.sub(r'\s\d+$', '', full_name).strip()
+            else:
+                fund_name = '未知名称'
             
             # 2. 详情表格 (基金类型、成立日期、管理人等)
             info_table = soup.find('table', class_='info w790')
@@ -158,7 +196,8 @@ async def fetch_and_cache_fund_info(fund_codes):
     
     # 检查哪些基金信息缺失或需要更新 (对于静态信息，只抓取一次)
     for code in fund_codes:
-        if code not in info_cache or info_cache.get(code, {}).get('name') in ['未知名称', '']:
+        # 仅当 code 不在缓存中 或 缓存中的 name 是 '未知名称' 时才重新抓取
+        if code not in info_cache or info_cache.get(code, {}).get('name') in ['未知名称', '抓取失败']:
             codes_to_fetch.append(code)
 
     if not codes_to_fetch:
@@ -178,7 +217,7 @@ async def fetch_and_cache_fund_info(fund_codes):
                 if isinstance(result, dict):
                     info_cache[code] = result
                 else:
-                    # 抓取失败，仍然将代码添加到缓存中，防止下次重复尝试（可以设置标记）
+                    # 抓取失败，将标记为 '抓取失败'
                     info_cache[code] = {"code": code, "name": "抓取失败"}
             except Exception as e:
                 print(f"处理基本信息任务时发生错误: {e}")
@@ -189,7 +228,7 @@ async def fetch_and_cache_fund_info(fund_codes):
     return info_cache
 
 # --------------------------------------------------------------------------------------
-# 基金净值 (动态数据) 抓取和保存逻辑
+# 基金净值 (动态数据) 抓取和保存逻辑 (保持不变)
 # --------------------------------------------------------------------------------------
 
 def load_latest_date(fund_code):
@@ -199,7 +238,6 @@ def load_latest_date(fund_code):
         try:
             df = pd.read_csv(output_path, parse_dates=['date'], encoding='utf-8')
             if not df.empty:
-                # 关键修复：使用 .date() 获取纯 Python 的 date 对象，而不是 .normalize()
                 latest_date = df['date'].max().date() 
                 print(f"  -> 基金 {fund_code} 现有最新日期: {latest_date.strftime('%Y-%m-%d')}")
                 return latest_date
@@ -221,10 +259,7 @@ async def fetch_page(session, url):
         return await response.text()
 
 async def fetch_net_values(fund_code, session, semaphore):
-    """
-    使用“最新日期”作为停止条件，实现智能增量更新。
-    从 Page 1 开始抓取，遇到已有数据即停止。
-    """
+    """使用“最新日期”作为停止条件，实现智能增量更新。"""
     print(f"-> [START] 基金代码 {fund_code}")
     
     async with semaphore:
@@ -437,11 +472,7 @@ def main():
         
     print(f"找到 {len(processed_codes)} 个基金代码，开始获取数据...")
     
-    # 1. 抓取并缓存静态信息 (fund_info.json)
-    # asyncio.run(fetch_and_cache_fund_info(processed_codes)) # 可以在单独的 run 中执行
-
-    # 由于 main 是同步的，为了方便，将静态信息抓取也集成到同步环境中
-    # 为了避免嵌套 asyncio.run，我们将 fetch_and_cache_fund_info 放在 fetch_all_funds 的前面
+    # 1. 抓取并缓存静态信息 (fund_info.csv)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(fetch_and_cache_fund_info(processed_codes))
 
