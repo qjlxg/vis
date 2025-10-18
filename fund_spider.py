@@ -19,10 +19,11 @@ BASE_URL_NET_VALUE = "http://fundf10.eastmoney.com/F10DataApi.aspx?type=lsjz&cod
 BASE_URL_INFO = "http://fund.eastmoney.com/{fund_code}.html"
 INFO_CACHE_FILE = 'fund_info.csv'
 
-# 设置请求头
+# 设置请求头（更新为最新Chrome User-Agent）
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
     'Referer': 'http://fund.eastmoney.com/',
+    'Accept-Language': 'zh-CN,zh;q=0.9',
 }
 
 REQUEST_TIMEOUT = 30
@@ -131,7 +132,7 @@ async def fetch_html_page(session, url):
         return await response.text()
 
 async def fetch_fund_info(fund_code, session, semaphore):
-    """异步抓取基金基本信息"""
+    """异步抓取基金基本信息（修复版：使用正则从文本提取详情）"""
     print(f"   -> 开始抓取基金 {fund_code} 的基本信息")
     url = BASE_URL_INFO.format(fund_code=fund_code)
     async with semaphore:
@@ -140,28 +141,23 @@ async def fetch_fund_info(fund_code, session, semaphore):
             html = await fetch_html_page(session, url)
             soup = BeautifulSoup(html, 'lxml')
             
-            # 1. 基金名称
+            # 1. 基金名称（更新正则，移除代码）
             name_tag = soup.find('div', class_='fundDetail-tit')
             if name_tag:
-                full_name = name_tag.find('div').text.strip()
-                fund_name = re.sub(r'\(\d+\)$|\s\d+$', '', full_name).strip()
+                full_name = name_tag.text.strip()
+                fund_name = re.sub(r'\s*\(\d{6}\)$', '', full_name).strip()  # 更新正则匹配无空格的(021909)
             else:
                 fund_name = '未知名称'
 
-            # 2. 详情表格
-            info_table = soup.find('table', class_='info w790')
-            info = {}
-            if info_table:
-                for row in info_table.find_all('tr'):
-                    cells = row.find_all(['th', 'td'])
-                    if len(cells) >= 2:
-                        key = cells[0].text.strip().replace('：', '').replace(':', '')
-                        value = cells[1].text.strip()
-                        info[key] = value
-
-            fund_type = info.get('基金类型', '未知')
-            establish_date = info.get('成 立 日', '未知')
-            manager = info.get('基金管理人', '未知')
+            # 2. 使用正则从HTML文本提取详情（因为表格class可能变了）
+            patterns = {
+                'type': r'类型[：:]\s*([^|]+?)\s*\|',
+                'establish_date': r'成\s*立\s*日[：:]\s*([^\s|]+)',
+                'manager': r'管\s*理\s*人[：:]\s*([^\s|]+)'
+            }
+            fund_type = re.search(patterns['type'], html, re.DOTALL).group(1).strip() if re.search(patterns['type'], html, re.DOTALL) else '未知'
+            establish_date = re.search(patterns['establish_date'], html, re.DOTALL).group(1).strip() if re.search(patterns['establish_date'], html, re.DOTALL) else '未知'
+            manager = re.search(patterns['manager'], html, re.DOTALL).group(1).strip() if re.search(patterns['manager'], html, re.DOTALL) else '未知'
             
             result = {
                 'code': fund_code,
