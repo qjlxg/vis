@@ -136,7 +136,7 @@ async def fetch_js_page(session, url):
         return await response.text()
 
 # ===================================================================================
-# 核心修复函数：使用正则提取变量
+# 核心修复函数：使用正则提取变量，修复未知名称问题
 # ===================================================================================
 async def fetch_fund_info(fund_code, session, semaphore):
     """异步抓取基金基本信息，包含增强的变量提取逻辑"""
@@ -183,13 +183,15 @@ async def fetch_fund_info(fund_code, session, semaphore):
             def extract_var(text, var_name):
                 # 匹配 var var_name = "value"; 或 var var_name = value;
                 # 匹配的内容可以是单引号、双引号字符串，或者裸露的值（如数字、布尔值、JSON对象）
+                # 使用非贪婪匹配 (.*?) 直到分号
                 match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*(.*?);', text, re.DOTALL)
                 if match:
                     value = match.group(1).strip()
                     # 尝试移除字符串首尾引号（单引号或双引号）
                     if (value.startswith('"') and value.endswith('"')) or \
                        (value.startswith("'") and value.endswith("'")):
-                        return value[1:-1]
+                        # 移除引号后，再次清理可能存在的 BOM 字符
+                        return value[1:-1].lstrip('\ufeff')
                     return value
                 return None
 
@@ -222,7 +224,8 @@ async def fetch_fund_info(fund_code, session, semaphore):
             data_info_str = extract_var(js_text, 'Data_fund_info')
             if data_info_str:
                  try:
-                    # Data_fund_info 是一个对象，也需要尝试解析
+                    # Data_fund_info 是一个对象，需要尝试解析。
+                    # 将 JS 属性名（无引号）转换为 JSON 属性名（双引号）
                     corrected_json_str = data_info_str.replace("'", '"')
                     corrected_json_str = re.sub(r'(\s*[\{\,]\s*)([a-zA-Z_]\w*)\s*:', r'\1"\2":', corrected_json_str)
                     data_info = json.loads(corrected_json_str)
@@ -236,6 +239,7 @@ async def fetch_fund_info(fund_code, session, semaphore):
                 '类型': fund_type_raw if fund_type_raw else data_main.get('FTyp', '未知'),
                 
                 # 从 Data_fund_info 或 data_main 中获取信息
+                # Data_fund_info 结构更准确，优先使用
                 '成立日期': data_info.get('EstablishDate', data_main.get('qjdate', '未知')),
                 '基金经理': data_info.get('FundManager', '未知'),
                 '公司名称': data_info.get('FundCompany', data_main.get('jjgs', '未知')),
@@ -255,7 +259,7 @@ async def fetch_fund_info(fund_code, session, semaphore):
                 '申购步长': fund_minsg if fund_minsg else '未知',
                 
                 # 冗余字段
-                '基金简称': fund_name.split('(')[0] if '(' in fund_name else fund_name,
+                '基金简称': fund_name.split('(')[0].strip() if '(' in fund_name else fund_name.strip(),
                 '基金类型': fund_type_raw if fund_type_raw else data_main.get('FTyp', '未知'),
                 '申购净值': '未知',
                 '申购报价': '未知',
@@ -295,7 +299,6 @@ async def fetch_and_cache_fund_info(fund_codes):
         for future in asyncio.as_completed(fetch_tasks):
             code, result = await future
             # 使用 fund_code (而非 result['代码']) 作为键，确保与 fetch_info 调用的代码一致
-            # 即使 result['名称'] 是 '抓取失败'，我们也要保存它，避免下次重复抓取
             info_cache[code] = result
             
     await loop.run_in_executor(None, save_info_cache, info_cache)
