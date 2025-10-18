@@ -11,14 +11,11 @@ from datetime import datetime, timedelta
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_message
 import concurrent.futures
 import json
-import json5 # 确保已安装: pip install json5
 
 # 定义文件路径和目录
 INPUT_FILE = 'C类.txt'
 OUTPUT_DIR = 'fund_data'
-# 基金净值数据 API (不变)
 BASE_URL_NET_VALUE = "http://fundf10.eastmoney.com/F10DataApi.aspx?type=lsjz&code={fund_code}&page={page_index}&per=20"
-# 基金基本信息 JS 接口 (新来源)
 BASE_URL_INFO_JS = "http://fund.eastmoney.com/pingzhongdata/{fund_code}.js"
 INFO_CACHE_FILE = 'fund_info.csv'
 
@@ -84,7 +81,6 @@ def load_info_cache():
         return {}
 
     try:
-        # 假设缓存文件使用 '代码' 作为索引
         df = pd.read_csv(INFO_CACHE_FILE, dtype={'代码': str}, encoding='utf-8')
         if df.empty:
             print(f"[警告] 缓存文件 {INFO_CACHE_FILE} 为空。")
@@ -108,13 +104,8 @@ def save_info_cache(cache):
         df.reset_index(inplace=True)
         df.rename(columns={'index': '代码'}, inplace=True)
         
-        # 固定列顺序，新增 '基金规模'
-        cols = [
-            '代码', '名称', '类型', '成立日期', '基金经理', '公司名称', '基金简称', '基金类型', 
-            '发行时间', '基金规模', '估值日期', '估值涨幅', '累计净值', '单位净值', 
-            '申购净值', '申购报价', '净值日期', '申购状态', '赎回状态', '费率', '申购步长'
-        ]
-        
+        # 固定列顺序，使用中文列名
+        cols = ['代码', '名称', '类型', '成立日期', '基金经理', '公司名称', '基金简称', '基金类型', '发行时间', '估值日期', '估值涨幅', '累计净值', '单位净值', '申购净值', '申购报价', '净值日期', '申购状态', '赎回状态', '费率', '申购步长']
         for col in cols:
             if col not in df.columns:
                 df[col] = '未知'
@@ -136,120 +127,106 @@ async def fetch_js_page(session, url):
     async with session.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT) as response:
         if response.status == 514:
             raise aiohttp.ClientError("Frequency Capped")
-        response.raise_for_status()
+        if response.status != 200:
+            print(f"   -> HTTP 状态码: {response.status}")
+            text = await response.text()
+            print(f"   -> 响应内容（前100字符）: {text[:100]}")
+            raise aiohttp.ClientError(f"HTTP 错误: {response.status}")
         return await response.text()
 
 async def fetch_fund_info(fund_code, session, semaphore):
-    """异步抓取基金基本信息 (从 JS 接口)"""
+    """异步抓取基金基本信息"""
     print(f"   -> 开始抓取基金 {fund_code} 的基本信息")
     url = BASE_URL_INFO_JS.format(fund_code=fund_code)
-    
-    # 默认值，包含所有用户期望的字段
-    default_result = {
-        '代码': fund_code, '名称': '抓取失败', '类型': '未知', '成立日期': '未知', 
-        '基金经理': '未知', '公司名称': '未知', '基金简称': '未知', '基金类型': '未知', 
-        '发行时间': '未知', '基金规模': '未知', '估值日期': '未知', '估值涨幅': '未知', 
-        '累计净值': '未知', '单位净值': '未知', '申购净值': '未知', '申购报价': '未知', 
-        '净值日期': '未知', '申购状态': '未知', '赎回状态': '未知', '费率': '未知', 
-        '申购步长': '未知'
-    }
-
     async with semaphore:
         try:
             await asyncio.sleep(REQUEST_DELAY * 0.5)
             js_text = await fetch_js_page(session, url)
             
-            # --- 1. 提取 fS_json (基金基本信息、净值信息) ---
-            fs_json_match = re.search(r'var fS_json = ({.*?});', js_text, re.DOTALL)
-            f_s_data = {}
-            if fs_json_match:
-                try:
-                    f_s_data = json5.loads(fs_json_match.group(1))
-                except Exception as e:
-                    print(f"   -> 基金 {fund_code} [警告]：fS_json 解析失败: {e}")
+            # 调试：记录响应内容的前100字符
+            print(f"   -> 基金 {fund_code} 响应内容（前100字符）: {js_text[:100]}")
             
-            # --- 2. 提取 fInfo (基金经理、公司、费率、状态) ---
-            finfo_match = re.search(r'var fInfo = ({.*?});', js_text, re.DOTALL)
-            f_info_data = {}
-            if finfo_match:
-                try:
-                    f_info_data = json5.loads(finfo_match.group(1))
-                except Exception as e:
-                    print(f"   -> 基金 {fund_code} [警告]：fInfo 解析失败: {e}")
-                    
-            # --- 3. 提取 Data_fund規模 (最新基金规模) ---
-            scale_match = re.search(r'Data_fund规模 = (\[.*?\]);', js_text, re.DOTALL)
-            scale = '未知'
-            if scale_match:
-                try:
-                    scale_data = json.loads(scale_match.group(1))
-                    if scale_data and scale_data[-1][1] is not None:
-                        # 取最新一个季度的数据
-                        scale = f"{scale_data[-1][1]} 亿元"
-                except Exception as e:
-                    print(f"   -> 基金 {fund_code} [警告]：Data_fund規模 解析失败: {e}")
-
-            # --- 4. 组合字段 ---
+            # 提取 JSON 数据：var apidata={...}; 或其他可能的变量名
+            json_match = re.search(r'var\s+\w+\s*=\s*(\{.*?\});?\s*$', js_text, re.DOTALL)
+            if not json_match:
+                raise ValueError("未找到 JSON 数据")
             
-            fund_name = f_s_data.get('name', '未知')
+            json_str = json_match.group(1)
+            data = json.loads(json_str)
             
-            # 基金经理
-            manager_list = f_info_data.get('fundManager', [])
-            manager = ', '.join([m.get('name', '未知') for m in manager_list]) if manager_list else '未知'
+            # 提取字段（基于典型结构）
+            fs = data.get('fs', [{}])[0]  # 第一个基金数据
+            fund_name = fs.get('shortname', '未知')  # 名称
+            fund_type = fs.get('ftype', '未知')  # 类型
+            establish_date = fs.get('setupdate', '未知')  # 成立日期
+            manager = fs.get('fundmanager', '未知')  # 基金经理
             
-            # 申购/赎回状态
-            buy_status_code = str(f_info_data.get('buy', '0'))
-            buy_status = "开放申购" if buy_status_code == '1' else ("暂停申购" if buy_status_code == '0' else buy_status_code)
+            # 提取更多信息
+            fcName = fs.get('compname', '未知')  # 公司名称
+            jjjc = fs.get('shortname', '未知')  # 基金简称
+            jjlx = fs.get('ftype', '未知')  # 基金类型
+            fjsj = fs.get('setupdate', '未知')  # 发行时间
+            gzrq = fs.get('gzdate', '未知')  # 估值日期
+            gzbl = fs.get('gztime', '未知')  # 估值涨幅
+            ljjz = fs.get('cumvalue', '未知')  # 累计净值
+            dwjz = fs.get('dwjz', '未知')  # 单位净值
+            sgjz = fs.get('gszzl', '未知')  # 申购净值
+            sgbz = fs.get('gsdate', '未知')  # 申购报价
+            jzrq = fs.get('jzrq', '未知')  # 净值日期
+            buy = fs.get('buy', '未知')  # 申购状态
+            sell = fs.get('sell', '未知')  # 赎回状态
+            rate = fs.get('rate', '未知')  # 费率
+            sgbs = fs.get('sgbs', '未知')  # 申购步长
             
-            sell_status_code = str(f_info_data.get('sell', '0'))
-            sell_status = "开放赎回" if sell_status_code == '1' else ("暂停赎回" if sell_status_code == '0' else sell_status_code)
-
-            # 费率显示
-            buy_rate_raw = f_info_data.get('rate', '未知')
-            buy_rate_display = str(buy_rate_raw)
-            if str(buy_rate_raw).replace('.', '', 1).isdigit():
-                try:
-                    buy_rate_display = f"{float(buy_rate_raw) * 100:.2f}%"
-                except ValueError:
-                    pass # 保持原样
-
             result = {
                 '代码': fund_code,
                 '名称': fund_name,
-                '类型': f_s_data.get('fundtype', '未知'),
-                '成立日期': f_s_data.get('startdate', '未知'),
+                '类型': fund_type,
+                '成立日期': establish_date,
                 '基金经理': manager,
-                '公司名称': f_info_data.get('compname', '未知'),
-                '基金简称': f_s_data.get('shortname', '未知'),
-                '基金类型': f_info_data.get('fundType2', f_s_data.get('fundtype', '未知')),
-                '发行时间': f_s_data.get('startdate', '未知'), # 通常与成立日期相同
-                '基金规模': scale, # 基金规模
-                '估值日期': f_s_data.get('gzdate', '未知'), # 估值日期
-                '估值涨幅': f_s_data.get('gszzl', '未知'), # 估算涨幅
-                '累计净值': f_s_data.get('ljjz', '未知'),
-                '单位净值': f_s_data.get('dwjz', '未知'),
-                '申购净值': f_s_data.get('dwjz', '未知'), # 申购净值通常是单位净值
-                '申购报价': f_s_data.get('jzrq', '未知'), # 使用最新净值日期作为申购报价的日期参考
-                '净值日期': f_s_data.get('jzrq', '未知'),
-                '申购状态': buy_status,
-                '赎回状态': sell_status,
-                '费率': buy_rate_display,
-                '申购步长': f_s_data.get('sgbs', '未知')
+                '公司名称': fcName,
+                '基金简称': jjjc,
+                '基金类型': jjlx,
+                '发行时间': fjsj,
+                '估值日期': gzrq,
+                '估值涨幅': gzbl,
+                '累计净值': ljjz,
+                '单位净值': dwjz,
+                '申购净值': sgjz,
+                '申购报价': sgbz,
+                '净值日期': jzrq,
+                '申购状态': buy,
+                '赎回状态': sell,
+                '费率': rate,
+                '申购步长': sgbs
             }
-            
-            # *** 健壮性检查：只有在连基金代码和名称都抓取失败时才抛出错误 ***
-            if fund_name in ['未知', 'undefined']:
-                 # 即使抓取失败，也返回默认结构，只是名称设为'抓取失败'
-                 print(f"   -> 基金 {fund_code} [信息抓取失败]: 核心名称信息缺失。")
-                 return fund_code, default_result
-                 
-            print(f"   -> 基金 {fund_code} 基本信息抓取成功: {result.get('名称')}")
+            print(f"   -> 基金 {fund_code} 基本信息抓取成功")
             return fund_code, result
 
         except Exception as e:
-            # 顶级捕获，返回失败状态
-            print(f"   -> 基金 {fund_code} [信息抓取失败 - 最终]: {e}")
-            return fund_code, default_result
+            print(f"   -> 基金 {fund_code} [信息抓取失败]: {e}")
+            return fund_code, {
+                '代码': fund_code,
+                '名称': '抓取失败',
+                '类型': '未知',
+                '成立日期': '未知',
+                '基金经理': '未知',
+                '公司名称': '未知',
+                '基金简称': '未知',
+                '基金类型': '未知',
+                '发行时间': '未知',
+                '估值日期': '未知',
+                '估值涨幅': '未知',
+                '累计净值': '未知',
+                '单位净值': '未知',
+                '申购净值': '未知',
+                '申购报价': '未知',
+                '净值日期': '未知',
+                '申购状态': '未知',
+                '赎回状态': '未知',
+                '费率': '未知',
+                '申购步长': '未知'
+            }
 
 async def fetch_and_cache_fund_info(fund_codes):
     """主函数：检查缓存，对未缓存的基金进行并发抓取"""
@@ -258,8 +235,7 @@ async def fetch_and_cache_fund_info(fund_codes):
     loop = asyncio.get_event_loop()
     info_cache = await loop.run_in_executor(None, load_info_cache)
     
-    # 检查缓存中是否有缺失或失败的记录
-    codes_to_fetch = [code for code in fund_codes if code not in info_cache or info_cache[code].get('名称') in ['未知', '抓取失败']]
+    codes_to_fetch = [code for code in fund_codes if code not in info_cache or info_cache[code].get('名称') in ['未知名称', '抓取失败']]
     
     if not codes_to_fetch:
         print("所有基金的基本信息都已在缓存中。")
@@ -269,16 +245,6 @@ async def fetch_and_cache_fund_info(fund_codes):
     
     semaphore = asyncio.Semaphore(MAX_CONCURRENT)
     
-    # 准备一个失败字典，用于在异步任务失败时，确保写入缓存的结构完整
-    failure_dict = {
-        '代码': 'code_placeholder', '名称': '抓取失败', '类型': '未知', '成立日期': '未知', 
-        '基金经理': '未知', '公司名称': '未知', '基金简称': '未知', '基金类型': '未知', 
-        '发行时间': '未知', '基金规模': '未知', '估值日期': '未知', '估值涨幅': '未知', 
-        '累计净值': '未知', '单位净值': '未知', '申购净值': '未知', '申购报价': '未知', 
-        '净值日期': '未知', '申购状态': '未知', '赎回状态': '未知', '费率': '未知', 
-        '申购步长': '未知'
-    }
-
     async with ClientSession() as session:
         fetch_tasks = [fetch_fund_info(code, session, semaphore) for code in codes_to_fetch]
         
@@ -288,17 +254,35 @@ async def fetch_and_cache_fund_info(fund_codes):
                 info_cache[code] = result
             except Exception as e:
                 print(f"[错误] 处理基本信息任务时发生错误: {e}")
-                temp_fail = failure_dict.copy()
-                temp_fail['代码'] = code
-                info_cache[code] = temp_fail
+                info_cache[code] = {
+                    '代码': code,
+                    '名称': '抓取失败',
+                    '类型': '未知',
+                    '成立日期': '未知',
+                    '基金经理': '未知',
+                    '公司名称': '未知',
+                    '基金简称': '未知',
+                    '基金类型': '未知',
+                    '发行时间': '未知',
+                    '估值日期': '未知',
+                    '估值涨幅': '未知',
+                    '累计净值': '未知',
+                    '单位净值': '未知',
+                    '申购净值': '未知',
+                    '申购报价': '未知',
+                    '净值日期': '未知',
+                    '申购状态': '未知',
+                    '赎回状态': '未知',
+                    '费率': '未知',
+                    '申购步长': '未知'
+                }
                 
-    # 保存更新后的缓存
     await loop.run_in_executor(None, save_info_cache, info_cache)
     print("\n======== 基金基本信息抓取完成 ========\n")
     return info_cache
 
 # --------------------------------------------------------------------------------------
-# 基金净值 (动态数据) 抓取和保存逻辑 (保持不变)
+# 基金净值 (动态数据) 抓取和保存逻辑
 # --------------------------------------------------------------------------------------
 
 def load_latest_date(fund_code):
@@ -377,6 +361,7 @@ async def fetch_net_values(fund_code, session, semaphore):
 
                 page_records = []
                 stop_fetch = False
+                latest_api_date = None
                 
                 for row in rows:
                     cols = row.find_all('td')
@@ -390,6 +375,8 @@ async def fetch_net_values(fund_code, session, semaphore):
                         
                     try:
                         date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                        if not latest_api_date or date > latest_api_date:
+                            latest_api_date = date
                         
                         if latest_date and date <= latest_date:
                             stop_fetch = True
@@ -399,11 +386,13 @@ async def fetch_net_values(fund_code, session, semaphore):
                     except ValueError:
                         continue
                 
+                if latest_api_date:
+                    print(f"   基金 {fund_code} API 返回最新日期: {latest_api_date.strftime('%Y-%m-%d')}")
+                
                 all_records.extend(page_records)
                 
                 if stop_fetch:
-                    date_display = latest_date.strftime('%Y-%m-%d') if latest_date else '未知日期'
-                    print(f"   基金 {fund_code} [增量停止]：页面 {page_index} 遇到旧数据 ({date_display})，停止抓取。")
+                    print(f"   基金 {fund_code} [增量停止]：页面 {page_index} 遇到旧数据 ({latest_date.strftime('%Y-%m-%d')})，停止抓取。")
                     break
                 
                 page_index += 1
@@ -497,7 +486,6 @@ async def fetch_all_funds(fund_codes):
 
             if isinstance(net_values, list):
                 try:
-                    # 使用 run_in_executor 在线程池中执行同步的 pandas/文件I/O操作
                     success, new_records = await loop.run_in_executor(None, save_to_csv, fund_code, net_values)
                     if success:
                         success_count += 1
@@ -531,12 +519,7 @@ def main():
         processed_codes = fund_codes
     print(f"本次处理 {len(processed_codes)} 个基金。")
 
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
+    loop = asyncio.get_event_loop()
     loop.run_until_complete(fetch_and_cache_fund_info(processed_codes))
     success_count, total_new_records, failed_codes = loop.run_until_complete(fetch_all_funds(processed_codes))
     
