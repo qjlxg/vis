@@ -32,6 +32,7 @@ FORCE_UPDATE = False  # 是否强制重新抓取（忽略所有缓存）
 MAX_FUNDS_PER_RUN = 100  # 每次运行脚本最多处理的基金代码数量 (0 表示不限制)
 
 # 检查基金数据新鲜度的阈值（如果最新日期比今天早 3 天，就强制从头（page=1）开始爬取）
+# 这用于捕获数据严重滞后的情况，并利用 CSV 去重机制高效更新。
 FRESHNESS_CHECK_DAYS = 3 
 
 def get_all_fund_codes(file_path):
@@ -89,15 +90,11 @@ def save_cache(fund_code, last_page):
         print(f"  -> 保存缓存 {cache_file} 失败: {e}")
         
 # --------------------------------------------------------------------------------------
-# 优化后的新鲜度检查逻辑
+# 新鲜度检查逻辑 (保持不变，用于强制从头开始，但只更新缺失数据)
 # --------------------------------------------------------------------------------------
 
 def write_cache_page_zero(fund_code):
-    """
-    更新缓存文件，将 last_page 设置为 0。
-    这样下次抓取时会从 page=1 开始，但由于 save_to_csv 有去重逻辑，
-    只会下载和保存 API 端更新的部分数据，而不是整个历史。
-    """
+    """更新缓存文件，将 last_page 设置为 0，触发利用去重机制的增量更新。"""
     cache_file = os.path.join(OUTPUT_DIR, f"{fund_code}_cache.json")
     try:
         with open(cache_file, 'w') as f:
@@ -111,11 +108,10 @@ def write_cache_page_zero(fund_code):
 async def check_fund_freshness_and_update_cache(fund_code):
     """
     同步检查本地 CSV 文件的最新日期是否过期。
-    如果过期，则将缓存页数设置为 0，强制重新爬取（利用去重机制实现增量更新）。
+    如果过期，则将缓存页数设置为 0。
     """
     csv_file = os.path.join(OUTPUT_DIR, f"{fund_code}.csv")
     if not os.path.exists(csv_file):
-        # 没有本地文件，不需要检查新鲜度，直接爬取
         return fund_code, "无本地 CSV，将从头开始爬取"
 
     try:
@@ -132,23 +128,19 @@ async def check_fund_freshness_and_update_cache(fund_code):
         today = datetime.now().date()
         date_threshold = today - timedelta(days=FRESHNESS_CHECK_DAYS)
 
-        # 3. 比较
+        # 3. 比较：如果本地最新日期比阈值早，判定为过期
         if local_latest_date.date() < date_threshold:
             print(f"  -> [FRESHNESS] 基金 {fund_code} 判定为过期/不完整：本地最新日期 {local_latest_date.date()} 早于阈值 {date_threshold}。")
-            
-            # 使用同步的 write_cache_page_zero 函数来修改缓存
-            # 注意: 这里不需要使用 run_in_executor 因为文件操作相对较快，
-            # 并且我们是在一个专门的预处理阶段执行，不会阻塞主抓取循环
             write_cache_page_zero(fund_code)
             
             return fund_code, "已重置缓存为 0，强制重新抓取缺失数据"
         else:
-            print(f"  -> [FRESHNESS] 基金 {fund_code} 数据新鲜 (最新日期: {local_latest_date.date()})，无需强制更新。")
+            # 在 GitHub Actions 中，如果数据新鲜，则此处的日志可能被截断
+            # print(f"  -> [FRESHNESS] 基金 {fund_code} 数据新鲜 (最新日期: {local_latest_date.date()})，无需强制更新。")
             return fund_code, "数据新鲜，使用缓存"
 
     except Exception as e:
         print(f"  -> [FRESHNESS] 基金 {fund_code} 检查新鲜度失败，跳过检查: {e}")
-        # 检查失败，保持原有缓存不变
         return fund_code, "新鲜度检查失败"
 # --------------------------------------------------------------------------------------
 
@@ -178,11 +170,20 @@ async def fetch_net_values(fund_code, session, semaphore):
         first_run = True
         dynamic_delay = REQUEST_DELAY
 
-        # 优化逻辑：如果缓存命中，从前一页开始重新抓取（仅针对增量部分）
-        # 如果缓存是 0 (freshness check 重置的)，page_index 会是 1，不会触发回退。
+        # *** 优化点：增加回退页数到 2 页 ***
+        # 如果缓存命中，从前两页开始重新抓取，以最大限度捕获最新的数据变动。
         if page_index > 1:
-            page_index -= 1 # 回退一页，save_to_csv 的去重逻辑会处理重复数据
-            print(f"   基金 {fund_code} 从缓存 {page_index+1} 开始，回退至 {page_index} 页重新抓取，确保数据最新。")
+            start_page_before_rollback = page_index
+            
+            # 回退两页。max(1, ...) 确保不会回退到 0 或更小
+            page_index = max(1, page_index - 2) 
+            
+            # 如果是 page_index=1，则回退到 page_index=1，打印信息以区分
+            if start_page_before_rollback > 2:
+                print(f"   基金 {fund_code} 从缓存 {start_page_before_rollback} 开始，回退至 {page_index} 页重新抓取（两页回退），确保数据最新。")
+            else:
+                 print(f"   基金 {fund_code} 从缓存 {start_page_before_rollback} 开始，回退至 {page_index} 页重新抓取（一页回退），确保数据最新。")
+
 
         while page_index <= total_pages:
             url = BASE_URL.format(fund_code=fund_code, page_index=page_index, page_size=page_size)
@@ -201,15 +202,17 @@ async def fetch_net_values(fund_code, session, semaphore):
                     total_records = int(records_match.group(1)) if records_match else '未知'
                     print(f"   基金 {fund_code} 信息：总页数 {total_pages}，总记录数 {total_records}。")
                     if page_index > total_pages:
-                        print(f"   基金 {fund_code} [跳过]：缓存页数 ({page_index-1}) >= 总页数 ({total_pages})。")
-                        return fund_code, f"缓存跳过: 缓存页数 {page_index-1} >= 总页数 {total_pages}"
+                        print(f"   基金 {fund_code} [跳过]：当前页数 ({page_index}) > 总页数 ({total_pages})。")
+                        return fund_code, f"缓存跳过: 当前页数 {page_index} > 总页数 {total_pages}"
                     first_run = False
                 
                 table = soup.find('table') 
                 if not table:
+                    # 只有在页数大于 1 且不是总页数时才认为是错误，否则可能是有效数据爬完
+                    if page_index == total_pages and page_index > 1:
+                         # 最后一页可能无数据，但总页数是正确的
+                         break
                     print(f"   基金 {fund_code} 第 {page_index} 页未找到表格数据，可能无效或无数据。")
-                    if page_index == total_pages:
-                        break
                     return fund_code, f"无表格数据: 基金代码可能无效"
 
                 rows = table.find_all('tr')[1:] 
@@ -296,11 +299,9 @@ def save_to_csv(fund_code, data):
 
 async def fetch_all_funds(fund_codes):
     """异步获取所有基金数据，并在任务完成时立即保存数据（实现边下载边保存）"""
-    # 这里不需要 Semaphore，因为 freshness check 只是读取和写入本地文件
-    # 我们使用 run_in_executor 来运行同步的新鲜度检查
     loop = asyncio.get_event_loop()
     
-    # 1. (修改) 首先进行新鲜度检查，并根据需要重置缓存
+    # 1. 首先进行新鲜度检查，并根据需要重置缓存
     print("\n======== 开始基金数据新鲜度检查和缓存预处理（利用去重实现增量更新） ========")
     freshness_tasks = [loop.run_in_executor(None, check_fund_freshness_and_update_cache, fund_code) for fund_code in fund_codes]
     await asyncio.gather(*freshness_tasks) # 等待所有新鲜度检查任务完成
