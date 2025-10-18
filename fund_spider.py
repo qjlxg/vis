@@ -11,7 +11,6 @@ from datetime import datetime, timedelta
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_message
 import concurrent.futures
 import json
-import ast  # 用于安全地解析 Python/JS 对象字面量
 
 # 定义文件路径和目录
 INPUT_FILE = 'C类.txt'
@@ -33,7 +32,7 @@ MAX_FUNDS_PER_RUN = 0
 PAGE_SIZE = 20
 
 # --------------------------------------------------------------------------------------
-# 辅助函数：JS变量提取和解析
+# 辅助函数：JS变量提取和解析 (增强)
 # --------------------------------------------------------------------------------------
 
 def extract_simple_var(text, var_name):
@@ -41,6 +40,7 @@ def extract_simple_var(text, var_name):
     match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*(.*?);', text, re.DOTALL)
     if match:
         value = match.group(1).strip()
+        # 尝试移除字符串首尾引号（单引号或双引号）
         if (value.startswith('"') and value.endswith('"')) or \
            (value.startswith("'") and value.endswith("'")):
             return value[1:-1].lstrip('\ufeff')
@@ -48,59 +48,59 @@ def extract_simple_var(text, var_name):
     return None
 
 def extract_json_var(text, var_name):
-    """提取复杂的 JSON/JS Object Literal 变量，如 apidata, Data_fund_info"""
-    # 匹配 var var_name = [{...}] ; 或 var var_name = {...} ;
-    # 非贪婪匹配直到遇到结束的 ]} 之一，后面跟着分号
-    match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*([\[\{].*?[\]\}])\s*;', text, re.DOTALL)
+    """
+    提取复杂的 JSON/JS Object Literal 变量，如 apidata, Data_fund_info。
+    使用更宽泛的匹配来应对不同格式的开始和结束符。
+    """
+    # 匹配 var var_name = [ { ... } ] ; 或 var var_name = { ... } ;
+    match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*(\[.*?\]|\{.*?\}|\[.*?\}\]\s*\/\*|\{.*?\}\s*\/\*).*?;', text, re.DOTALL)
     if match:
-        return match.group(1).strip()
+        data_str = match.group(1).strip()
+        # 清理可能存在的 JS 注释尾部
+        data_str = re.sub(r'/\*.*$', '', data_str, re.DOTALL).strip()
+        return data_str
     return None
 
-def parse_js_object_literal(js_text):
+def clean_and_parse_js_object(js_text):
     """
-    尝试将 JS 对象字面量（键没有引号）转换为 Python 字典。
-    处理对象 { } 或单元素数组 [ { } ] 结构，并抽取基金经理名称。
+    核心解析函数：清理 JS 对象字面量中的非标准 JSON 格式，并尝试解析为 Python 字典。
     """
     if not js_text:
-        return None
+        return {}
 
-    # 1. 如果是 [ {...} ] 结构，移除外层数组中括号
+    # 1. 移除外层数组中括号 (Data_fund_info 常见结构是 [ {...} ])
     if js_text.startswith('[') and js_text.endswith(']'):
         js_text = js_text.strip()[1:-1].strip()
         if not js_text:
-            return None
+            return {}
 
+    # 2. 替换单引号为双引号
+    text = js_text.replace("'", '"')
+    
+    # 3. 替换 JS 的 true/false/null 为标准 JSON/Python 的 True/False/None
+    text = text.replace('true', 'True').replace('false', 'False').replace('null', 'None')
+    
+    # 4. **关键修复：** 将无引号的键名 (key:) 替换为带双引号的键名 ("key":)
+    # 匹配：{ 或 , 之后跟着一个或多个字母数字下划线，再跟着 :
+    # 同时排除键名是数字或已经带有双引号的情况。
+    # (\s*[\{\,]\s*) 匹配定界符，([a-zA-Z_]\w*) 匹配合法的 JS/Python 标识符键名
     try:
-        # 2. 替换 JS 的 true/false/null 为 Python 的 True/False/None
-        text = js_text.replace('true', 'True').replace('false', 'False').replace('null', 'None')
-        
-        # 3. 将无引号的键名 (key:) 替换为带引号的键名 ("key":)
-        # 此处使用更精确的正则，匹配字母数字下划线开头的键名
+        # 使用正则表达式将无引号的键转换为带双引号的键
+        # 注意：此处使用的正则假设键名是合法的 JS 标识符
         text = re.sub(r'([\{\,]\s*)([a-zA-Z_]\w*)\s*:', r'\1"\2":', text)
         
-        # 4. 尝试用 ast.literal_eval 解析 (最安全的方法)
-        data = ast.literal_eval(text)
+        # 将 Python 的 True/False/None 替换回标准 JSON 的 true/false/null 供 json.loads 使用
+        text = text.replace('True', 'true').replace('False', 'false').replace('None', 'null')
 
-        # 5. 抽取基金经理名称，使 FundManager 字段变成字符串
-        if isinstance(data, dict):
-            if 'FundManager' in data and isinstance(data['FundManager'], list) and data['FundManager']:
-                # 提取第一个基金经理的名称
-                manager_name = data['FundManager'][0].get('name', '未知')
-                data['FundManager'] = manager_name
-        
+        data = json.loads(text)
         return data
         
+    except json.JSONDecodeError as e:
+        print(f"    [解析错误] JSON 解析失败: {e}. 原始文本片段: {text[:100]}...")
+        return {}
     except Exception as e:
-        # 失败时，尝试用标准 JSON 解析器（如果它接近标准 JSON）
-        try:
-             # 清理可能残留的单引号或 JS 注释
-             clean_text = js_text.replace("'", '"')
-             clean_text = re.sub(r'//.*?\n|/\*.*?\*/', '', clean_text, flags=re.DOTALL)
-             return json.loads(clean_text)
-        except:
-             print(f"    [解析错误] 尝试使用 ast/json 解析 JS 对象字面量失败: {e}. 原始文本: {js_text[:50]}...")
-             return None
-
+        print(f"    [解析错误] 通用清理失败: {e}")
+        return {}
 
 # --------------------------------------------------------------------------------------
 # 基金信息抓取核心逻辑 (已更新)
@@ -134,35 +134,37 @@ async def fetch_fund_info(fund_code, session, semaphore):
             fund_rate = extract_simple_var(js_text, 'fund_Rate')
             fund_minsg = extract_simple_var(js_text, 'fund_minsg')
             
-            # 3. 提取并解析 apidata (大型 JSON 块，包含估值和最新净值)
-            data_main = {}
-            data_main_str = extract_json_var(js_text, 'apidata')
-            if data_main_str:
-                 # apidata 通常是标准 JSON，但可能包含注释或格式问题，先简单清洗
-                 corrected_json_str = data_main_str.replace("'", '"')
-                 corrected_json_str = re.sub(r'//.*?\n|/\*.*?\*/', '', corrected_json_str, flags=re.DOTALL)
-                 try:
-                     data_main = json.loads(corrected_json_str)
-                 except json.JSONDecodeError:
-                     # 如果标准 JSON 失败，尝试用 JS Object Literal 方式解析
-                     data_main = parse_js_object_literal(data_main_str) or {}
-            
-            # 4. 提取并解析 Data_fund_info (基金概况信息，包含经理、公司、成立日期)
+            # 3. 提取并解析 Data_fund_info (基金概况信息，包含经理、公司、成立日期)
             data_info = {}
             data_info_str = extract_json_var(js_text, 'Data_fund_info')
             if data_info_str:
-                 # Data_fund_info 是典型的 JS Object Literal，使用新的通用解析函数
-                 data_info = parse_js_object_literal(data_info_str) or {}
-
+                 data_info = clean_and_parse_js_object(data_info_str)
+            
+            # 4. 提取并解析 apidata (大型 JSON 块，包含估值和最新净值)
+            data_main = {}
+            data_main_str = extract_json_var(js_text, 'apidata')
+            if data_main_str:
+                 data_main = clean_and_parse_js_object(data_main_str)
 
             # 5. 整理最终结果
-            # 注意：所有字段都优先从 Data_fund_info 或 data_main 中获取，fallback 到 '未知'
+            
+            # 从 data_info 中安全提取基金经理名称 (因为它可能是一个复杂对象)
+            manager_name = '未知'
+            # Data_fund_info 的 FundManager 字段通常是包含经理信息的数组
+            if 'FundManager' in data_info and isinstance(data_info['FundManager'], list) and data_info['FundManager']:
+                # 提取第一个基金经理的名称
+                manager_name = data_info['FundManager'][0].get('name', '未知')
+            elif 'FundManager' in data_info and isinstance(data_info['FundManager'], str):
+                 # 有些简单格式直接是字符串
+                 manager_name = data_info['FundManager']
+
+
             result = {
                 '代码': fund_code_in_data,
                 '名称': fund_name,
                 
-                # 核心信息提取
-                '基金经理': data_info.get('FundManager', '未知'),
+                # 核心信息提取 (优先 Data_fund_info)
+                '基金经理': manager_name,
                 '公司名称': data_info.get('FundCompany', data_main.get('jjgs', '未知')),
                 '成立日期': data_info.get('EstablishDate', data_main.get('qjdate', '未知')),
                 '基金简称': data_info.get('jjjc', fund_name.split('(')[0].strip() if '(' in fund_name else fund_name.strip()),
@@ -170,7 +172,7 @@ async def fetch_fund_info(fund_code, session, semaphore):
                 '发行时间': data_info.get('IssueDate', '未知'),
                 '类型': data_info.get('FundType', fund_type_raw or data_main.get('FTyp', '未知')),
                 
-                # 净值/估值信息
+                # 净值/估值信息 (apidata)
                 '估值日期': data_main.get('gzrq', '未知'),
                 '估值涨幅': data_main.get('gszzl', '未知'),
                 '累计净值': data_main.get('ljjz', '未知'),
@@ -199,6 +201,10 @@ async def fetch_fund_info(fund_code, session, semaphore):
 # --------------------------------------------------------------------------------------
 # 文件读取、缓存和动态数据抓取逻辑 (保持不变)
 # --------------------------------------------------------------------------------------
+# (其余函数，如 get_all_fund_codes, load_info_cache, save_info_cache, fetch_js_page, 
+# fetch_and_cache_fund_info, load_latest_date, fetch_page, fetch_net_values, 
+# save_to_csv, fetch_all_funds, main 保持与上一个回复一致，只更新了 fetch_and_cache_fund_info 的重新抓取条件)
+
 
 def get_all_fund_codes(file_path):
     """从 C类.txt 文件中读取基金代码"""
@@ -332,11 +338,6 @@ async def fetch_and_cache_fund_info(fund_codes):
     await loop.run_in_executor(None, save_info_cache, info_cache)
     print("\n======== 基金基本信息抓取完成 ========\n")
     return info_cache
-
-
-# --------------------------------------------------------------------------------------
-# 基金净值 (动态数据) 抓取和保存逻辑 (保持不变)
-# --------------------------------------------------------------------------------------
 
 def load_latest_date(fund_code):
     """从本地 CSV 文件中读取现有最新日期"""
