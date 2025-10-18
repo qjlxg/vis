@@ -20,6 +20,16 @@ def get_historical_volume(code, start_date, end_date):
         return df[['日期', '成交量']], df['成交量'].mean()  # 返回日期和成交量，以及均值
     return None, None
 
+def get_latest_trading_day_data(code, today, max_backtrack=3):
+    """尝试获取最近交易日的数据，最多回溯 max_backtrack 天"""
+    for i in range(max_backtrack + 1):
+        check_date = today - datetime.timedelta(days=i)
+        check_date_str = check_date.strftime('%Y%m%d')
+        df = ak.index_zh_a_hist(symbol=code, period="daily", start_date=check_date_str, end_date=check_date_str)
+        if not df.empty:
+            return df, check_date
+    return None, None
+
 def plot_volume_chart(code, name, df, year_month, timestamp):
     """生成并保存成交量曲线图"""
     plt.figure(figsize=(10, 6))
@@ -45,7 +55,7 @@ def get_daily_volume():
     data_list = []
     today = datetime.date.today()
     today_str = today.strftime('%Y%m%d')
-    # 计算过去30天的日期范围（包括今天，用于曲线图）
+    # 计算过去30天的日期范围（包括最近交易日，用于曲线图）
     past_30_days_start = (today - datetime.timedelta(days=30)).strftime('%Y%m%d')
     past_7_days_end = (today - datetime.timedelta(days=1)).strftime('%Y%m%d')
     past_7_days_start = (today - datetime.timedelta(days=8)).strftime('%Y%m%d')
@@ -55,11 +65,13 @@ def get_daily_volume():
     timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
     for name, code in indices.items():
-        # 获取当日数据
-        df_daily = ak.index_zh_a_hist(symbol=code, period="daily", start_date=today_str, end_date=today_str)
-        if not df_daily.empty:
+        # 尝试获取最近交易日数据
+        df_daily, latest_date = get_latest_trading_day_data(code, today)
+        if df_daily is not None and not df_daily.empty:
             volume = df_daily['成交量'].iloc[0]
-            # 获取过去7天平均成交量（用于对比）
+            # 获取过去7天平均成交量（基于最新交易日前的7天）
+            past_7_days_end = (latest_date - datetime.timedelta(days=1)).strftime('%Y%m%d')
+            past_7_days_start = (latest_date - datetime.timedelta(days=8)).strftime('%Y%m%d')
             _, hist_volume = get_historical_volume(code, past_7_days_start, past_7_days_end)
             if hist_volume:
                 volume_change_pct = ((volume - hist_volume) / hist_volume * 100) if hist_volume != 0 else 0
@@ -75,11 +87,11 @@ def get_daily_volume():
             })
 
             # 获取最近30天数据并生成曲线图
-            df_hist, _ = get_historical_volume(code, past_30_days_start, today_str)
+            df_hist, _ = get_historical_volume(code, past_30_days_start, latest_date.strftime('%Y%m%d'))
             if df_hist is not None and not df_hist.empty:
                 plot_volume_chart(code, name, df_hist, year_month, timestamp)
         else:
-            print(f"{name} ({code}) 无当日数据，可能非交易日。")
+            print(f"{name} ({code}) 无最近交易日数据，可能连续非交易日。")
     
     if data_list:
         return pd.DataFrame(data_list), year_month, timestamp
