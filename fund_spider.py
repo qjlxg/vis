@@ -31,9 +31,9 @@ FORCE_UPDATE = False  # 是否强制重新抓取（忽略所有缓存）
 # 保持上次新增的限制逻辑，以便在 GitHub Actions 中控制批次
 MAX_FUNDS_PER_RUN = 0  # 每次运行脚本最多处理的基金代码数量 (0 表示不限制)
 
-# 检查基金数据新鲜度的阈值（如果最新日期比今天早 3 天，就强制从头（page=1）开始爬取）
+# 检查基金数据新鲜度的阈值（如果最新日期比今天早 5 天，就强制从头（page=1）开始爬取）
 # 这用于捕获数据严重滞后的情况，并利用 CSV 去重机制高效更新。
-FRESHNESS_CHECK_DAYS = 3 
+FRESHNESS_CHECK_DAYS = 5 
 
 def get_all_fund_codes(file_path):
     """从 C类.txt 文件中读取基金代码（单列无标题，UTF-8 编码）"""
