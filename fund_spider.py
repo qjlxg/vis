@@ -13,7 +13,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 import concurrent.futures
 import json
 import logging
-# V5 核心依赖
+# V5/V6 核心依赖
 import jsbeautifier
 
 # 配置日志
@@ -40,7 +40,7 @@ MAX_FUNDS_PER_RUN = 0
 PAGE_SIZE = 20
 
 # --------------------------------------------------------------------------------------
-# 辅助函数：JS变量提取和解析 (V5 - 引入 jsbeautifier)
+# 辅助函数：JS变量提取和解析 (V6 - 保持 V5 的鲁棒性)
 # --------------------------------------------------------------------------------------
 
 def extract_simple_var(text, var_name):
@@ -55,10 +55,9 @@ def extract_simple_var(text, var_name):
         return value.lstrip('\ufeff')
     return None
 
-def extract_js_variable_content_v5(text, var_name):
+def extract_js_variable_content_v6(text, var_name):
     """
-    V5 核心：使用栈计数提取复杂的 JS 变量内容 (内容本身)，不进行清理。
-    清理工作交给 clean_and_parse_js_object_v5。
+    V6 核心：使用栈计数提取复杂的 JS 变量内容 (内容本身)。
     """
     # 1. 定位到变量赋值的起始位置
     start_match = re.search(r'var\s+' + re.escape(var_name) + r'\s*=\s*', text)
@@ -113,9 +112,9 @@ def extract_js_variable_content_v5(text, var_name):
     logger.error(f"变量 {var_name} 提取失败：栈计数失败。")
     return None
 
-def clean_and_parse_js_object_v5(js_text):
+def clean_and_parse_js_object_v6(js_text):
     """
-    V5 核心解析函数：使用 jsbeautifier 清理 JS 对象字面量，转换为合法 JSON。
+    V6 核心解析函数：使用 jsbeautifier 清理 JS 对象字面量，转换为合法 JSON。
     """
     if not js_text:
         return {}
@@ -126,7 +125,6 @@ def clean_and_parse_js_object_v5(js_text):
     text = text.lstrip('\ufeff')
     
     # 2. **核心步骤：** 使用 jsbeautifier 格式化/清理 JS 文本
-    # 这会移除注释，标准化空格，并有助于后续处理
     try:
         # 尝试美化，如果文本太乱可能失败
         cleaned_js = jsbeautifier.beautify(text)
@@ -135,7 +133,6 @@ def clean_and_parse_js_object_v5(js_text):
         cleaned_js = text # 回退到原始文本
 
     # 3. **激进替换：** 将 JS 单引号字符串替换为 JSON 双引号字符串
-    # 注意：这可能会破坏包含双引号的单引号字符串，但对于天天基金的结构是有效的。
     def replace_single_quotes(match):
         # 匹配单引号引起来的字符串内容
         return '"' + match.group(1).replace('"', '\\"') + '"'
@@ -172,12 +169,13 @@ def clean_and_parse_js_object_v5(js_text):
         logger.error(f"解析过程中发生通用错误: {e}")
         return {}
 
+
 # --------------------------------------------------------------------------------------
-# 基金信息抓取核心逻辑 (使用 V5 稳定提取逻辑)
+# 基金信息抓取核心逻辑 (V6 - 采用多变量自适应提取策略)
 # --------------------------------------------------------------------------------------
 
 async def fetch_fund_info(fund_code, session, semaphore):
-    """异步抓取基金基本信息，使用 V5 稳定提取逻辑"""
+    """异步抓取基金基本信息，使用 V6 多变量自适应提取逻辑"""
     print(f"    -> 开始抓取基金 {fund_code} 的基本信息")
     url = BASE_URL_INFO_JS.format(fund_code=fund_code)
     
@@ -201,33 +199,48 @@ async def fetch_fund_info(fund_code, session, semaphore):
             fund_rate = extract_simple_var(js_text, 'fund_Rate')
             fund_minsg = extract_simple_var(js_text, 'fund_minsg')
             
-            # 2. 提取并解析 Data_fund_info (使用 V5 解析)
+            # 初始化数据源字典
             data_info = {}
-            data_info_str = extract_js_variable_content_v5(js_text, 'Data_fund_info')
-            if data_info_str:
-                 data_info = clean_and_parse_js_object_v5(data_info_str)
-            
-            # 3. 提取并解析 apidata (使用 V5 解析)
             data_main = {}
-            data_main_str = extract_js_variable_content_v5(js_text, 'apidata')
+            data_manager = {}
+            
+            # 2. **V6 核心：** 尝试从所有可能的变量中提取数据
+            
+            # A. 提取并解析 Data_managerInfo (经理信息最可靠来源)
+            data_manager_str = extract_js_variable_content_v6(js_text, 'Data_managerInfo')
+            if data_manager_str:
+                 data_manager = clean_and_parse_js_object_v6(data_manager_str)
+            
+            # B. 提取并解析 apidata (估值、公司、成立日期等信息)
+            data_main_str = extract_js_variable_content_v6(js_text, 'apidata')
             if data_main_str:
-                 data_main = clean_and_parse_js_object_v5(data_main_str)
+                 data_main = clean_and_parse_js_object_v6(data_main_str)
 
-            # 4. 整理最终结果
+            # C. 提取并解析 Data_fund_info (传统信息来源，作为补充)
+            data_info_str = extract_js_variable_content_v6(js_text, 'Data_fund_info')
+            if data_info_str:
+                 data_info = clean_and_parse_js_object_v6(data_info_str)
+
+
+            # 3. **V6 核心：** 整合最终结果，按优先级合并信息
             
             manager_name = '未知'
-            # 从 data_info 中安全提取基金经理名称 (它通常是包含经理信息的数组)
-            if 'FundManager' in data_info:
-                if isinstance(data_info['FundManager'], list) and data_info['FundManager']:
-                    # 提取第一个基金经理的名称
-                    manager_name = data_info['FundManager'][0].get('name', '未知')
-                elif isinstance(data_info['FundManager'], str) and data_info['FundManager']:
-                     manager_name = data_info['FundManager']
-                elif isinstance(data_info['FundManager'], dict):
-                     manager_name = data_info['FundManager'].get('name', '未知')
+            # 优先级1: Data_managerInfo (数组)
+            if isinstance(data_manager, list) and data_manager and isinstance(data_manager[0], dict):
+                 manager_name = data_manager[0].get('name', '未知')
+            # 优先级2: apidata (有时包含单个经理名)
+            elif data_main.get('jjjl') and isinstance(data_main['jjjl'], str):
+                 manager_name = data_main['jjjl']
+            # 优先级3: Data_fund_info (旧结构)
+            elif 'FundManager' in data_info:
+                 if isinstance(data_info['FundManager'], list) and data_info['FundManager']:
+                     manager_name = data_info['FundManager'][0].get('name', '未知')
 
-
-            company_name = data_info.get('FundCompany', data_main.get('jjgs', '未知'))
+            
+            # 公司名称：apidata > Data_fund_info
+            company_name = data_main.get('jjgs', data_info.get('FundCompany', '未知'))
+            # 成立日期：apidata > Data_fund_info
+            establish_date = data_main.get('qjdate', data_info.get('EstablishDate', '未知'))
 
             result = {
                 '代码': fund_code_in_data,
@@ -235,7 +248,8 @@ async def fetch_fund_info(fund_code, session, semaphore):
                 
                 '基金经理': manager_name,
                 '公司名称': company_name,
-                '成立日期': data_info.get('EstablishDate', data_main.get('qjdate', '未知')),
+                '成立日期': establish_date,
+                
                 '基金简称': data_info.get('jjjc', fund_name.split('(')[0].strip() if '(' in fund_name else fund_name.strip()),
                 '基金类型': data_info.get('FundType', fund_type_raw or data_main.get('FTyp', '未知')),
                 '发行时间': data_info.get('IssueDate', '未知'),
