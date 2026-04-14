@@ -1,0 +1,58 @@
+name: sub_parser
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */4 * * *'  
+  push:
+    paths:
+      - 'sub_parser.py'
+      - '.github/workflows/sub_parser.yml'
+
+jobs:
+  run-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Public Script
+        uses: actions/checkout@v4
+
+      - name: Checkout Private Data Repo
+        uses: actions/checkout@v4
+        with:
+          repository: qjlxg/362
+          token: ${{ secrets.GH_TOKEN }}
+          path: private_folder  
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: pip install aiohttp geoip2 pyyaml
+
+      - name: Run Sub Parser
+        run: python sub_parser.py
+        env:
+          TZ: Asia/Shanghai
+          DATA_PATH: private_folder/data
+
+      - name: Commit and Push Results to Private Repo
+        run: |
+          cd private_folder
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # 暂存生成的 4 个结果文件
+          git add data/sub_parser.txt data/sub_parser.csv data/sub_parser_base64.txt data/sub_parser.yaml
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            export TZ='Asia/Shanghai'
+            git commit -m "Update parsed nodes: $(date +'%Y-%m-%d %H:%M:%S')"
+            git pull --rebase origin main
+            git push origin main
+          fi
+        env:
+          TZ: Asia/Shanghai
