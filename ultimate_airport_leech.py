@@ -31,8 +31,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ==================== 配置与参数 ====================
 INPUT_FILE = "urls.txt"
-CACHE_FILE = "airport_master.cache"      # 成功日志
-ERROR_FILE = "airport_error.cache"       # 不成功日志
+CACHE_FILE = "airport_master.cache"      
+ERROR_FILE = "airport_error.cache"      
 SUB_FILE = "subscribes.txt"
 NODES_FILE = "nodes.txt"
 MAX_WORKERS = 150
@@ -48,8 +48,8 @@ DOMAIN_BLACKLIST = {
     'speedtest.net', 'fast.com', 'ip138.com', 'ip.skk.moe', 'gitee.com',
     'xueshu', 'research', 'edu', 'gov', 'amazon', 'bing', 'outlook', 'mail'
 }
-SUFFIX_BLACKLIST = ('')
-# SUFFIX_BLACKLIST = ('.gov', '.edu', '.mil', '.org', '.gov.cn', '.edu.cn')
+
+SUFFIX_BLACKLIST = ('.gov', '.edu', '.mil', '.org', '.gov.cn', '.edu.cn')
 io_lock = threading.Lock()
 
 # ==================== 基础工具函数 ====================
