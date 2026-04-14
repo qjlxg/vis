@@ -350,7 +350,7 @@ def main():
                     error_logs.append(log_block)
             except: pass 
 
-    with open(CACHE_FILE, 'w', encoding='utf-8') as f: f.writelines(success_logs)
+    with open(CACHE_FILE, 'a', encoding='utf-8') as f: f.writelines(success_logs)
     with open(ERROR_FILE, 'w', encoding='utf-8') as f: f.writelines(error_logs)
     
     fast_log(f"--- 任务结束 ---")
