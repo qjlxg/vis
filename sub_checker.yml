@@ -1,0 +1,52 @@
+name: sub_checker_public_runner
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  check_and_update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Public Script
+        uses: actions/checkout@v4 # 拉取公开仓库里的 sub_checker.py
+
+      - name: Checkout Private Data Repo
+        uses: actions/checkout@v4
+        with:
+          repository: qjlxg/362 # 你的私有仓库
+          token: ${{ secrets.GH_TOKEN }} # 你在公开仓库 Settings 里配置的 Token
+          path: private_folder  # 关键：存放在子文件夹，避免覆盖脚本
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install "httpx[http2]"
+
+      - name: 执行检测脚本
+        run: python sub_checker.py
+        env:
+          TZ: Asia/Shanghai
+          DATA_PATH: private_folder/data # 告诉脚本去子文件夹里找数据
+
+      - name: 提交并推送结果到私有仓库
+        run: |
+          cd private_folder
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # 只添加 data 目录下的文件
+          git add data/valid_subs.txt data/sub_links.txt
+          
+          if git diff --staged --quiet; then
+            echo "没有检测到更新内容。"
+          else
+            git commit -m "Update subscriptions $(date +'%Y-%m-%d %H:%M:%S')"
+            git push origin main
+          fi
+        env:
+          TZ: Asia/Shanghai
