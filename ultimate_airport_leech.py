@@ -30,11 +30,15 @@ except ImportError:
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ==================== 配置与参数 ====================
-INPUT_FILE = "urls.txt"
-CACHE_FILE = "airport_master.cache"      
-ERROR_FILE = "airport_error.cache"      
-SUB_FILE = "subscribes.txt"
-NODES_FILE = "nodes.txt"
+DATA_DIR = os.getenv('DATA_PATH', 'data')
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR)
+
+INPUT_FILE = os.path.join(DATA_DIR, "urls.txt")
+CACHE_FILE = os.path.join(DATA_DIR, "airport_master.cache")      
+ERROR_FILE = os.path.join(DATA_DIR, "airport_error.cache")      
+SUB_FILE = os.path.join(DATA_DIR, "subscribes.txt")
+NODES_FILE = os.path.join(DATA_DIR, "nodes.txt")
 MAX_WORKERS = 150
 SH_TZ = datetime.timezone(datetime.timedelta(hours=8))
 
