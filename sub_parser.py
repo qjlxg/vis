@@ -6,36 +6,29 @@ import csv
 import os
 import socket
 import json
-import time
-import ssl
 import hashlib
 from datetime import datetime
-from urllib.parse import urlparse, quote, unquote
+from urllib.parse import urlparse, quote
 import geoip2.database
 
-# --- 基础配置 ---
 DATA_DIR = os.getenv('DATA_PATH', 'data')
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 
 INPUT_FILE = os.path.join(DATA_DIR, "sub_links.txt")
 OUTPUT_TXT = os.path.join(DATA_DIR, "sub_parser.txt")
-OUTPUT_B64 = os.path.join(DATA_DIR, "sub_parser_base64.txt")
 OUTPUT_CSV = os.path.join(DATA_DIR, "sub_parser.csv")
-OUTPUT_YAML = os.path.join(DATA_DIR, "sub_parser.yaml")
 GEOIP_DB = os.path.join(DATA_DIR, "GeoLite2-Country.mmdb")
 
 MAX_CONCURRENT_TASKS = 500 
 MAX_RETRIES = 1
 
-# --- 排除过滤名单 (包含网址及其变种关键词) ---
 BLACKLIST_KEYWORDS = [
-    "ly.ba000.cc", "wocao.su7.me", "jiasu01.vip", "louwangzhiyu", "mojie",  "lyly.649844.xyz", "multiserver", "shahramv1",
+    "ly.ba000.cc", "wocao.su7.me", "jiasu01.vip", "louwangzhiyu", "mojie", "lyly.649844.xyz", "multiserver", "shahramv1",
     "yywhale", "nxxbbf", "slianvpn", "cloudaddy", "quickbeevpn", 
-    "tianmiao", "cokecloud", "boluoidc", "gpket", "fast8888", "ykxqn"
+    "tianmiao", "cokecloud", "boluoidc", "gpket", "fast8888", "ykxqn", "argo.ooo"
 ]
 
-# --- 工具函数 ---
 def decode_base64(data):
     if not data: return ""
     try:
@@ -68,15 +61,6 @@ def get_geo_info(host, reader):
     except:
         return "🌐", "未知地区"
 
-def get_node_details(line, protocol):
-    try:
-        if protocol == 'vmess':
-            v = json.loads(decode_base64(line.split("://")[1]))
-            return {"server": v.get('add'), "port": int(v.get('port', 443)), "uuid": v.get('id'), "tls": v.get('tls') == "tls"}
-        u = urlparse(line)
-        return {"server": u.hostname, "port": int(u.port or 443)}
-    except: return None
-
 def parse_nodes(content, reader):
     if "://" not in content[:50] and len(content) > 20:
         content = decode_base64(content)
@@ -88,7 +72,6 @@ def parse_nodes(content, reader):
         if link.lower().startswith(('http://', 'https://')): continue
         protocol = link.split("://")[0].lower()
         try:
-            # 提取服务器地址
             if protocol == 'vmess':
                 host = json.loads(decode_base64(link.split("://")[1])).get('add')
             else:
@@ -98,10 +81,7 @@ def parse_nodes(content, reader):
                 host = host_part
             
             if not host: continue
-            
-            # --- 核心过滤逻辑：排除黑名单域名或变种 ---
-            host_lower = host.lower()
-            if any(keyword in host_lower for keyword in BLACKLIST_KEYWORDS):
+            if any(keyword in host.lower() for keyword in BLACKLIST_KEYWORDS):
                 continue
 
             flag, country = get_geo_info(host, reader)
@@ -111,6 +91,8 @@ def parse_nodes(content, reader):
 
 async def fetch_with_retry(session, url, reader, semaphore):
     async with semaphore:
+        if any(k in url.lower() for k in BLACKLIST_KEYWORDS):
+            return url, [], 0
         for _ in range(MAX_RETRIES + 1):
             try:
                 async with session.get(url, timeout=15, ssl=False) as res:
@@ -118,7 +100,7 @@ async def fetch_with_retry(session, url, reader, semaphore):
                     text = await res.text()
                     nodes = parse_nodes(text, reader)
                     if nodes:
-                        print(f"[+] 成功 ({len(nodes)} 节点): {url}")
+                        print(f"[+] 成功解析有效源，获取节点: {len(nodes)} 个")
                         return url, nodes, len(nodes)
             except: pass
         return url, [], 0
@@ -130,7 +112,6 @@ async def main():
             all_urls = re.findall(r'https?://[^\s<>\"\'\u4e00-\u9fa5]+', f.read())
 
     unique_urls = list(dict.fromkeys(all_urls))
-    # 同时也排除包含黑名单关键词的订阅链接本身
     unique_urls = [u for u in unique_urls if not any(k in u.lower() for k in BLACKLIST_KEYWORDS)]
     
     if not unique_urls: return
@@ -151,7 +132,6 @@ async def main():
                 raw_node_objs.extend(nodes); stats.append([url, count])
 
     final_links = []
-    yaml_proxies = []
     seen_lines = set()
     
     for obj in raw_node_objs:
@@ -175,39 +155,13 @@ async def main():
                 final_links.append(f"ssr://{encode_base64(main_part + '&remarks=' + new_rem)}")
             else:
                 final_links.append(f"{base_link}#{quote(new_name)}")
-
-            d = get_node_details(line, protocol)
-            if d:
-                p_type = "trojan" if protocol == 'anytls' else protocol
-                proxy_item = f"  - {{ name: \"{new_name}\", type: {p_type}, server: {d['server']}, port: {d['port']}"
-                if protocol == 'vmess': proxy_item += f", uuid: {d['uuid']}, cipher: auto, tls: {str(d['tls']).lower()}"
-                proxy_item += ", udp: true }"
-                yaml_proxies.append(proxy_item)
         except: continue
-
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    with open(OUTPUT_TXT, "a", encoding="utf-8") as f: f.write("\n".join(final_links))
-    with open(OUTPUT_B64, "w", encoding="utf-8") as f: f.write(encode_base64("\n".join(final_links)))
+    with open(OUTPUT_TXT, "w", encoding="utf-8") as f: f.write("\n".join(final_links))
     with open(OUTPUT_CSV, "w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f); writer.writerow(["订阅链接", "节点数量"]); writer.writerows(stats)
 
-    yaml_header = f"""# 美帝国主义是纸老虎
-# Updated: {now_str}
-# Total: {len(final_links)}
-
-port: 7890
-mode: Rule
-dns:
-  enable: true
-  nameserver: [119.29.29.29, 223.5.5.5]
-
-proxies:
-"""
-    with open(OUTPUT_YAML, "w", encoding="utf-8") as f:
-        f.write(yaml_header + "\n".join(yaml_proxies))
-
-    print(f"--- 任务完成！已生成 4 个文件，总计节点: {len(final_links)} ---")
+    print(f"--- 任务完成！已生成文件，总计节点: {len(final_links)} ---")
 
 if __name__ == "__main__":
     if os.name == 'nt': asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
