@@ -1,9 +1,15 @@
 import requests
 import urllib3
+import os
 from concurrent.futures import ThreadPoolExecutor
 
 # 禁用不安全请求的警告
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# ==================== 路径配置 ====================
+DATA_DIR = os.getenv('DATA_PATH', '.')
+FILE_NAME = 'urls.txt'
+FILE_PATH = os.path.join(DATA_DIR, FILE_NAME)
 
 def check_url_logic(url):
     """底层探测逻辑"""
@@ -49,14 +55,16 @@ def check_url(line):
     return None
 
 def main():
-    file_path = 'urls.txt'
-    
+    if not os.path.exists(FILE_PATH):
+        print(f"Error: {FILE_PATH} not found.")
+        return
+
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(FILE_PATH, 'r', encoding='utf-8') as f:
             # 读取所有行并过滤掉空行
             urls = [line.strip() for line in f if line.strip()]
-    except FileNotFoundError:
-        print(f"Error: {file_path} not found.")
+    except Exception as e:
+        print(f"Read error: {e}")
         return
 
     if not urls:
@@ -65,9 +73,9 @@ def main():
 
     # 去重
     urls = list(dict.fromkeys(urls))
-    print(f"Total entries to check: {len(urls)}")
+    print(f"Total entries to check: {len(urls)} from {FILE_PATH}")
 
-    # 并发测试 (max_workers 可根据网络情况调整)
+    # 并发测试
     with ThreadPoolExecutor(max_workers=85) as executor:
         results = list(executor.map(check_url, urls))
 
@@ -75,11 +83,11 @@ def main():
     valid_urls = [url for url in results if url is not None]
 
     # 保存回文件
-    with open(file_path, 'w', encoding='utf-8') as f:
+    with open(FILE_PATH, 'w', encoding='utf-8') as f:
         for url in valid_urls:
             f.write(url + '\n')
     
-    print(f"Done! Saved {len(valid_urls)} valid links.")
+    print(f"Done! Saved {len(valid_urls)} valid links to {FILE_PATH}.")
 
 if __name__ == "__main__":
     main()
