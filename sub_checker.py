@@ -4,10 +4,9 @@ import re
 import os
 from datetime import datetime, timedelta
 
-# 1. 从环境变量获取路径（GitHub Actions 用），本地运行则默认使用 'data'
+# 1. 获取路径
 DATA_DIR = os.getenv('DATA_PATH', 'data')
 
-# 2. 如果目录不存在则创建（防止本地初次运行报错）
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 
@@ -15,10 +14,12 @@ if not os.path.exists(DATA_DIR):
 INPUT_FILE = os.path.join(DATA_DIR, 'subscribes.txt')
 OUTPUT_FILE = os.path.join(DATA_DIR, 'valid_subs.txt')
 LINKS_FILE = os.path.join(DATA_DIR, 'sub_links.txt')
-# 4. 运行参数 (之前报错就是因为少了这两行)
-CONCURRENT_LIMIT = 50 
+
+# 4. 运行参数
+CONCURRENT_LIMIT = 500 
 TIMEOUT = 15.0
-# --- 排除过滤名单 (包含网址及其变种关键词) ---
+
+# --- 排除过滤名单 ---
 BLACKLIST_KEYWORDS = [
     "ly.ba000.cc", "wocao.su7.me", "jiasu01.vip", "louwangzhiyu", "mojie", "lyly.649844.xyz", "multiserver", "shahramv1",
     "yywhale", "nxxbbf", "slianvpn", "cloudaddy", "quickbeevpn", 
@@ -41,14 +42,13 @@ def format_bytes(size):
         size /= 1024.0
     return f"{size:.2f}PB"
 
-async def check_sub(client, url, semaphore):
+async def check_sub(client, url, semaphore, index):
     url = url.strip()
     if not url or not url.startswith('http'):
         return None
     
     # --- 黑名单过滤逻辑 ---
     if any(keyword.lower() in url.lower() for keyword in BLACKLIST_KEYWORDS):
-        # print(f"🚫 [跳过] 命中黑名单: {url[:30]}...")
         return None
 
     async with semaphore:
@@ -73,12 +73,9 @@ async def check_sub(client, url, semaphore):
             now = datetime.now()
             now_ts = int(now.timestamp())
             
-            # 基础有效筛选：总流量 > 0 且 剩余 > 0 且 未过期
             if total > 0 and remain > 0 and (expire == 0 or expire > now_ts):
-                
-                # 优质订阅判断逻辑：流量 > 0 且 (永不过期 或 剩余时间 >= 2天)
                 is_premium = False
-                if expire == 0 or (expire - now_ts) >= 172800: # 172800 = 2天
+                if expire == 0 or (expire - now_ts) >= 172800: # 2天
                     is_premium = True
 
                 if expire > 0:
@@ -102,8 +99,10 @@ async def check_sub(client, url, semaphore):
                     f"sub_url  {url}\n"
                     f"time  {check_time}\n"
                 )
+               
+                quality_tag = "[优质]" if is_premium else "[有效]"
+                print(f"✅ {quality_tag} 节点 {index:03} 检查完成")
                 
-                print(f"✅ [有效] {url[:40]}...")
                 return (res_info, is_premium, url)
             
             return None
@@ -116,24 +115,21 @@ async def main():
         return
 
     with open(INPUT_FILE, 'r', encoding='utf-8') as f:
-        # 去重并清洗 URL
         raw_urls = list(set([line.strip() for line in f if line.strip().startswith('http')]))
 
     semaphore = asyncio.Semaphore(CONCURRENT_LIMIT)
     limits = httpx.Limits(max_keepalive_connections=20, max_connections=CONCURRENT_LIMIT)
     
     async with httpx.AsyncClient(verify=False, http2=True, timeout=TIMEOUT, limits=limits) as client:
-        tasks = [check_sub(client, url, semaphore) for url in raw_urls]
+       
+        tasks = [check_sub(client, url, semaphore, i+1) for i, url in enumerate(raw_urls)]
         results = await asyncio.gather(*tasks)
 
-    # 提取非空数据
     valid_data = [r for r in results if r]
     
-    # 写入 valid_subs.txt
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         f.write("\n".join([item[0] for item in valid_data]))
     
-    # 写入 sub_links.txt (仅包含优质链接)
     premium_links = [item[2] for item in valid_data if item[1]]
     with open(LINKS_FILE, 'w', encoding='utf-8') as f:
         f.write("\n".join(premium_links))
