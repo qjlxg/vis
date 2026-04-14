@@ -3,10 +3,11 @@ name: check_links
 on:
   push:
     paths:
-      - 'urls.txt'
       - 'check_links.py'
       - '.github/workflows/check_links.yml'
   workflow_dispatch: 
+  schedule:
+    - cron: '0 0 * * *' # 可选：每天零点自动清理一次
 
 permissions:
   contents: write
@@ -16,14 +17,18 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout Public Script
+        uses: actions/checkout@v4
+
+      - name: Checkout Private Data Repo
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          persist-credentials: true
+          repository: qjlxg/362
+          token: ${{ secrets.GH_TOKEN }} 
+          path: private_folder
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
@@ -34,16 +39,19 @@ jobs:
       - name: Run check script
         env:
           TZ: 'Asia/Shanghai'
+          DATA_PATH: 'private_folder/data' 
         run: python check_links.py
 
-      - name: Commit and Push changes
+      - name: Commit and Push changes to Private Repo
         run: |
+          cd private_folder
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          if [ -n "$(git status --porcelain urls.txt)" ]; then
-            git add urls.txt
-            git commit -m "chore: auto-filter invalid links in urls.txt [skip ci]"
+          
+          if [ -n "$(git status --porcelain data/urls.txt)" ]; then
+            git add data/urls.txt
+            git commit -m "chore: auto-filter invalid links in data/urls.txt [$(date)]"
             git pull --rebase origin main
             git push origin main
           else
