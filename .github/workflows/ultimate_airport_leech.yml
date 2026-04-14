@@ -1,30 +1,32 @@
 name: ultimate_airport_leech
 
 on:
-  workflow_dispatch: # 手动运行
+  workflow_dispatch:
   push:
     paths:
       - 'ultimate_airport_leech.py'
       - '.github/workflows/ultimate_airport_leech.yml'
-      - 'urls.txt'
+      
   schedule:
     - cron: '0 */6 * * *' # 每6小时运行一次
 
 jobs:
   leech_task:
     runs-on: ubuntu-latest
-   
-    permissions:
-      contents: write
-
+    
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout Public Script
+        uses: actions/checkout@v4
+
+      - name: Checkout Private Data Repo
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0 
+          repository: qjlxg/362
+          token: ${{ secrets.GH_TOKEN }}
+          path: private_folder  
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -39,32 +41,25 @@ jobs:
 
       - name: Run Leech Engine
         run: python ultimate_airport_leech.py
+        env:
+          TZ: Asia/Shanghai
+          DATA_PATH: private_folder/data
 
-      - name: Commit and Push Results
+      - name: Commit and Push Results to Private Repo
         run: |
-          # 配置 Git 信息
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cd private_folder
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
           
-          # 1. 暂存指定的文件
-          git add airport_master.cache subscribes.txt airport_error.cache
+          # 仅暂存结果文件
+          git add data/airport_master.cache data/subscribes.txt data/nodes.txt data/airport_error.cache
           
-          # 2. 核心修复：清理工作区中未被追踪且不需要的文件
-          # 这样可以防止 git pull --rebase 报错 "unstaged changes"
-          git checkout -- . 
-          
-          # 3. 检查是否有更改需要提交
-          if git diff --cached --quiet; then
+          if git diff --staged --quiet; then
             echo "No changes to commit"
-            exit 0
+          else
+            git commit -m "Update subscription nodes [$(date +'%Y-%m-%d %H:%M:%S')]"
+            git pull --rebase origin main
+            git push origin main
           fi
-          
-          # 4. 提交本地更改
-          git commit -m "Update subscription nodes [$(date)]"
-          
-          # 5. 变基处理：获取远程更新并将本地提交移至顶端
-          # 使用 --no-stat 减少日志输出，使用 --rebase 保持提交历史线性
-          git pull --rebase origin main
-          
-          # 6. 推送至远程仓库
-          git push origin main
+        env:
+          TZ: Asia/Shanghai
