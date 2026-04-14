@@ -1,0 +1,70 @@
+name: ultimate_airport_leech
+
+on:
+  workflow_dispatch: # 手动运行
+  push:
+    paths:
+      - 'ultimate_airport_leech.py'
+      - '.github/workflows/ultimate_airport_leech.yml'
+      - 'urls.txt'
+  schedule:
+    - cron: '0 */6 * * *' # 每6小时运行一次
+
+jobs:
+  leech_task:
+    runs-on: ubuntu-latest
+   
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libglib2.0-0 libsm6 libxrender1 libxext6
+
+      - name: Install Python Dependencies
+        run: |
+          pip install curl_cffi ddddocr opencv-python-headless numpy requests urllib3 json5 beautifulsoup4 pyyaml
+
+      - name: Run Leech Engine
+        run: python ultimate_airport_leech.py
+
+      - name: Commit and Push Results
+        run: |
+          # 配置 Git 信息
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # 1. 暂存指定的文件
+          git add airport_master.cache subscribes.txt airport_error.cache
+          
+          # 2. 核心修复：清理工作区中未被追踪且不需要的文件
+          # 这样可以防止 git pull --rebase 报错 "unstaged changes"
+          git checkout -- . 
+          
+          # 3. 检查是否有更改需要提交
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          
+          # 4. 提交本地更改
+          git commit -m "Update subscription nodes [$(date)]"
+          
+          # 5. 变基处理：获取远程更新并将本地提交移至顶端
+          # 使用 --no-stat 减少日志输出，使用 --rebase 保持提交历史线性
+          git pull --rebase origin main
+          
+          # 6. 推送至远程仓库
+          git push origin main
