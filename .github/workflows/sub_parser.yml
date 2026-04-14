@@ -44,7 +44,7 @@ jobs:
           git config --local user.name "GitHub Action"
           
           # 暂存生成的 4 个结果文件
-          git add data/sub_parser.txt data/sub_parser.csv data/sub_parser_base64.txt data/sub_parser.yaml
+          git add data/sub_parser.txt data/sub_parser.csv
           
           if git diff --staged --quiet; then
             echo "No changes to commit."
