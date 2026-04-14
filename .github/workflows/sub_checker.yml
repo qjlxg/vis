@@ -47,6 +47,7 @@ jobs:
             echo "没有检测到更新内容。"
           else
             git commit -m "Update subscriptions $(date +'%Y-%m-%d %H:%M:%S')"
+            git pull --rebase origin main
             git push origin main
           fi
         env:
