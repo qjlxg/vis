@@ -10,14 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Public Script
-        uses: actions/checkout@v4 # 拉取公开仓库里的 sub_checker.py
+        uses: actions/checkout@v4 
 
       - name: Checkout Private Data Repo
         uses: actions/checkout@v4
         with:
-          repository: qjlxg/362 # 你的私有仓库
-          token: ${{ secrets.GH_TOKEN }} # 你在公开仓库 Settings 里配置的 Token
-          path: private_folder  # 关键：存放在子文件夹，避免覆盖脚本
+          repository: qjlxg/362
+          token: ${{ secrets.GH_TOKEN }}
+          path: private_folder  
 
       - name: Setup Python
         uses: actions/setup-python@v5
