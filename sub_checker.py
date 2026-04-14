@@ -4,21 +4,17 @@ import re
 import os
 from datetime import datetime
 
-
 DATA_DIR = os.getenv('DATA_PATH', 'data')
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
-
 
 INPUT_FILE = os.path.join(DATA_DIR, 'subscribes.txt')
 OUTPUT_FILE = os.path.join(DATA_DIR, 'valid_subs.txt')
 LINKS_FILE = os.path.join(DATA_DIR, 'sub_links.txt')
 
-
 CONCURRENT_LIMIT = 500 
 TIMEOUT = 15.0
 
-# --- 排除过滤名单 ---
 BLACKLIST_KEYWORDS = [
     "ly.ba000.cc", "wocao.su7.me", "jiasu01.vip", "louwangzhiyu", "mojie", "lyly.649844.xyz", "multiserver", "shahramv1",
     "yywhale", "nxxbbf", "slianvpn", "cloudaddy", "quickbeevpn", 
@@ -56,13 +52,11 @@ async def check_sub(client, url, semaphore):
                 'Accept': '*/*'
             }
             resp = await client.get(url, headers=headers, follow_redirects=True)
-            
             info_header = resp.headers.get('subscription-userinfo')
             if not info_header:
                 return None
 
             data = {k: int(v) for k, v in re.findall(r'(\w+)=([^; ]+)', info_header)}
-            
             total = data.get('total', 0)
             used = data.get('upload', 0) + data.get('download', 0)
             remain = total - used
@@ -71,10 +65,8 @@ async def check_sub(client, url, semaphore):
             now = datetime.now()
             now_ts = int(now.timestamp())
             
-         
             if total > 0 and remain > 0 and (expire == 0 or expire > now_ts):
                 is_premium = False
-               
                 if expire == 0 or (expire - now_ts) >= 172800:
                     is_premium = True
 
@@ -98,10 +90,7 @@ async def check_sub(client, url, semaphore):
                     f"sub_url  {url}\n"
                     f"time  {check_time}\n"
                 )
-                
-              
                 return (res_info, is_premium, url)
-            
             return None
         except:
             return None
@@ -113,11 +102,9 @@ async def main():
     with open(INPUT_FILE, 'r', encoding='utf-8') as f:
         raw_urls = list(set([line.strip() for line in f if line.strip().startswith('http')]))
 
-    if not raw_urls:
-        print("No URLs to check."); return
+    if not raw_urls: return
 
-    print(f"--- 正在检测 {len(raw_urls)} 个订阅源 ---")
-    
+    print(f"--- Processing {len(raw_urls)} sources ---")
     semaphore = asyncio.Semaphore(CONCURRENT_LIMIT)
     limits = httpx.Limits(max_keepalive_connections=20, max_connections=CONCURRENT_LIMIT)
     
@@ -127,18 +114,14 @@ async def main():
 
     valid_data = [r for r in results if r]
     
- 
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         f.write("\n".join([item[0] for item in valid_data]))
     
-   
     premium_links = [item[2] for item in valid_data if item[1]]
     with open(LINKS_FILE, 'w', encoding='utf-8') as f:
         f.write("\n".join(premium_links))
     
-    print(f"--- 任务完成 ---")
-    print(f"✅ 有效/总数: {len(valid_data)}/{len(raw_urls)}")
-    print(f"🚀 优质链接已存入: {LINKS_FILE}")
+    print(f"--- Done | Valid: {len(valid_data)} | Premium: {len(premium_links)} ---")
 
 if __name__ == "__main__":
     asyncio.run(main())
