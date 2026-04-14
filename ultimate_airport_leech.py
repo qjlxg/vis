@@ -48,8 +48,8 @@ DOMAIN_BLACKLIST = {
     'speedtest.net', 'fast.com', 'ip138.com', 'ip.skk.moe', 'gitee.com',
     'xueshu', 'research', 'edu', 'gov', 'amazon', 'bing', 'outlook', 'mail'
 }
-SUFFIX_BLACKLIST = ('.gov', '.edu', '.mil', '.org', '.gov.cn', '.edu.cn')
-
+SUFFIX_BLACKLIST = ('')
+# SUFFIX_BLACKLIST = ('.gov', '.edu', '.mil', '.org', '.gov.cn', '.edu.cn')
 io_lock = threading.Lock()
 
 # ==================== 基础工具函数 ====================
