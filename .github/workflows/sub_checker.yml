@@ -4,6 +4,10 @@ on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/sub_checker.yml'
+      - 'sub_checker.py'
 
 jobs:
   check_and_update:
@@ -31,17 +35,14 @@ jobs:
         run: python sub_checker.py
         env:
           TZ: Asia/Shanghai
-          DATA_PATH: private_folder/data # 告诉脚本去子文件夹里找数据
+          DATA_PATH: private_folder/data
 
       - name: 提交并推送结果到私有仓库
         run: |
           cd private_folder
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          
-          # 只添加 data 目录下的文件
           git add data/valid_subs.txt data/sub_links.txt
-          
           if git diff --staged --quiet; then
             echo "没有检测到更新内容。"
           else
