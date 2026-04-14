@@ -212,12 +212,6 @@ class SSPanelSession(Session):
 
 # ==================== 核心处理器 ====================
 def check_sub(url):
-    """
-    加强版订阅检测：
-    1. 解析 Header 获取流量和过期时间
-    2. 如果没有 Header，则下载内容检测是否包含节点关键字
-    3. 判定流量 > 0 且包含节点才算真正成功
-    """
     try:
         r = crequests.get(url, headers={'User-Agent': 'Clash.meta'}, timeout=15, verify=False)
         if not r.ok: return "HTTP_Error", False
@@ -226,7 +220,6 @@ def check_sub(url):
         traffic_info = ""
         total_traffic = 0
         
-        # 1. 尝试从 Header 获取信息
         if info_h:
             try:
                 p = {i.split('=')[0].strip(): i.split('=')[1].strip() for i in info_h.split(';') if '=' in i}
@@ -236,27 +229,23 @@ def check_sub(url):
                 traffic_info = f"{format_size(used)}/{format_size(total_traffic)} ({format_time(expire)})"
             except: pass
 
-        # 2. 深度校检内容：检查是否包含节点关键字
         content = r.text
-        # 尝试 Base64 解码检测内容
         try:
             decoded_content = base64.b64decode(content).decode('utf-8', errors='ignore')
         except:
             decoded_content = content
             
-        # 节点关键字匹配 (支持常见格式)
         node_keywords = ['vmess://', 'ssr://', 'ss://', 'trojan://', 'vless://', 'proxies:', 'Proxy:', 'SERVER=']
         has_nodes = any(k in decoded_content for k in node_keywords)
 
-        # 3. 最终成功判定
         if total_traffic > 0 and has_nodes:
             return traffic_info, True
         elif total_traffic > 0 and not has_nodes:
-            return f"TrafficOnly({traffic_info})", False # 有流量但没节点，通常是空订阅
+            return f"TrafficOnly({traffic_info})", False 
         elif has_nodes:
-            return "Active(NoTrafficHeader)", True # 没有流量头但有节点，视为成功
+            return "Active(NoTrafficHeader)", True 
         else:
-            return "EmptySubscription", False # 既没流量又没节点
+            return "EmptySubscription", False 
 
     except Exception as e:
         return f"CheckFailed({type(e).__name__})", False
@@ -284,12 +273,12 @@ def process_worker(url):
             login_text = test_s.get('auth/login').text
             if any(x in login_text for x in ["SSPanel", "staff", "checkin"]):
                 session = SSPanelSession(base_url); result["type"] = "sspanel"
-    except Exception as e:
-        result["reg_info"] = f"[失败] 面板识别异常: {type(e).__name__}"
+    except:
+        result["reg_info"] = "[失败] 面板识别异常"
         return result
 
     if not session:
-        result["reg_info"] = "[失败] 无法识别面板或非机场网站"
+        result["reg_info"] = "[失败] 无法识别面板"
         return result
 
     email = f"{''.join(random.choices(string.ascii_lowercase + string.digits, k=10))}@gmail.com"
@@ -310,17 +299,17 @@ def process_worker(url):
             info, is_ok = check_sub(sub_url)
             result["sub_info"] = info
             if is_ok:
-                fast_log(f" [+] {clean_dom} | {info} | {result['buy']}")
+            
+                fast_log(f" [+] 成功获取一个有效订阅 | 类型: {result['type']} | 套餐: {result['buy']}")
                 with io_lock:
                     with open(SUB_FILE, 'a') as f: f.write(sub_url + "\n")
                     with open(NODES_FILE, 'a') as f: f.write(sub_url + "\n")
             else:
-                # 如果检测不通过，强行把 reg_info 改为失败原因，方便主程序分流
                 result["reg_info"] = f"[判定失败] {info}" 
         else:
             result["sub_info"] = "无法获取订阅地址"
     except Exception as e:
-        result["reg_info"] = f"[报错] 运行异常: {str(e)}"
+        result["reg_info"] = f"[报错] 运行异常"
 
     return result
 
@@ -330,7 +319,7 @@ def main():
         return
         
     urls = list(set([u.strip() for u in open(INPUT_FILE).readlines() if "." in u]))
-    fast_log(f"=== 启动加强校验版引擎(过滤空订阅) === 任务数: {len(urls)}")
+    fast_log(f"=== 引擎启动 === 待处理目标: {len(urls)} 个")
     
     success_logs = []
     error_logs = []
@@ -341,6 +330,7 @@ def main():
             try:
                 res = f.result()
                 if not res: continue
+                
                 
                 log_block = (
                     f"[{res['domain']}]\n"
@@ -354,7 +344,6 @@ def main():
                     f"type      {res['type']}\n\n"
                 )
                 
-                # 分流判断：只有真正通过 check_sub 验证的才进 master
                 if "操作成功" in res['reg_info'] and res['sub_url'] != "N/A" and "判定失败" not in res['reg_info']:
                     success_logs.append(log_block)
                 else:
@@ -364,7 +353,9 @@ def main():
     with open(CACHE_FILE, 'w', encoding='utf-8') as f: f.writelines(success_logs)
     with open(ERROR_FILE, 'w', encoding='utf-8') as f: f.writelines(error_logs)
     
-    fast_log(f"任务结束 | 真实有效: {len(success_logs)} | 无效/跳过: {len(error_logs)}")
+    fast_log(f"--- 任务结束 ---")
+    fast_log(f"有效目标: {len(success_logs)}")
+    fast_log(f"无效/跳过: {len(error_logs)}")
 
 if __name__ == "__main__":
     main()
