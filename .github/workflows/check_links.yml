@@ -1,0 +1,51 @@
+name: check_links
+
+on:
+  push:
+    paths:
+      - 'urls.txt'
+      - 'check_links.py'
+      - '.github/workflows/check_links.yml'
+  workflow_dispatch: 
+
+permissions:
+  contents: write
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install requests urllib3
+
+      - name: Run check script
+        env:
+          TZ: 'Asia/Shanghai'
+        run: python check_links.py
+
+      - name: Commit and Push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          if [ -n "$(git status --porcelain urls.txt)" ]; then
+            git add urls.txt
+            git commit -m "chore: auto-filter invalid links in urls.txt [skip ci]"
+            git pull --rebase origin main
+            git push origin main
+          else
+            echo "No changes to urls.txt, skipping commit."
+          fi
