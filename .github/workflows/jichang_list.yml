@@ -1,0 +1,67 @@
+name: jichang_list
+
+on:
+  workflow_dispatch: # 允许手动触发
+  schedule:
+    # 每天北京时间上午 11:00 运行 (11 - 8 = 3 UTC)
+    - cron: '0 3 * * *'
+  push:
+    paths:
+      - 'jichang_list.py'
+      - '.github/workflows/jichang_list.yml'
+
+jobs:
+  update-trial-cfg:
+    runs-on: ubuntu-latest
+    # 赋予 Actions 写入权限
+    permissions:
+      contents: write
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          # 取消浅克隆，确保 rebase 有足够的历史记录
+          fetch-depth: 0
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4 playwright
+          # 如果你的脚本需要 playwright，请取消下行的注释
+          # playwright install chromium
+
+      - name: 运行 Python 脚本
+        env:
+          TZ: Asia/Shanghai
+        run: |
+          python jichang_list.py
+
+      - name: Commit and push changes
+        if: success()
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "github-actions[bot]"
+          
+          # 1. 强制将生成的文件加入暂存区
+          git add trial.cfg
+          
+          # 2. 检查是否有文件变动
+          if ! git diff --cached --exit-code; then
+            # 3. 先提交本地更改
+            git commit -m "Update trial.cfg [skip ci]"
+            
+            # 4. 关键：先拉取远程更新并进行 rebase
+            # 这样会将你的 commit 放在远程所有新 commit 之后，避免非快进式错误
+            git pull origin main --rebase
+            
+            # 5. 推送最终合并后的代码
+            git push origin main
+          else
+            echo "No changes to trial.cfg, skipping push."
+          fi
