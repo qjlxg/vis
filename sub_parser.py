@@ -15,7 +15,7 @@ DATA_DIR = os.getenv('DATA_PATH', 'data')
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 
-INPUT_FILE = os.path.join(DATA_DIR, "sub_links.txt")
+INPUT_FILE = os.path.join(DATA_DIR, "subscribes.txt")
 OUTPUT_TXT = os.path.join(DATA_DIR, "sub_parser.txt")
 OUTPUT_CSV = os.path.join(DATA_DIR, "sub_parser.csv")
 GEOIP_DB = os.path.join(DATA_DIR, "GeoLite2-Country.mmdb")
