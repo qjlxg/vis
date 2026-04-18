@@ -258,7 +258,7 @@ def main(start_urls, max_pages_per_source=90, max_workers=10):
 if __name__ == '__main__':
     start_urls_list = [
         'https://t.me/s/jichang_list',
-         'https://t.me/s/v2cross',            
+           
       
        
     ]
